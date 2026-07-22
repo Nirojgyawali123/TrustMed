@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TechMed Dashboard</title>
+    <link rel="stylesheet" href="/src/index.css" />
+  </head>
+  <body class="bg-slate-50 text-slate-900">
+    <div id="app" class="min-h-screen p-10">
+      <div class="max-w-5xl mx-auto">
+        <header class="mb-10">
+          <p class="text-sm uppercase tracking-[0.3em] text-slate-500">TechMed</p>
+          <h1 class="mt-3 text-4xl font-semibold tracking-tight text-slate-900">Patient support dashboard</h1>
+          <p class="mt-4 text-slate-600">Manage victim requests, review collector details, and verify case approvals from hospital or municipality teams.</p>
+          <div class="mt-6 flex flex-wrap gap-3 text-sm">
+            <a class="text-slate-700 hover:text-slate-900 underline" href="/src/pages/login.html">Login</a>
+            <a class="text-slate-700 hover:text-slate-900 underline" href="/src/pages/patients.html">Patient portal</a>
+            <a class="text-slate-700 hover:text-slate-900 underline" href="/src/pages/hospital.html">Hospital desk</a>
+            <a class="text-slate-700 hover:text-slate-900 underline" href="/src/pages/municipality.html">Municipality office</a>
+            <a class="text-slate-700 hover:text-slate-900 underline" href="/src/pages/citizen.html">Citizen giving</a>
+          </div>
+        </header>
+
+        <section class="grid gap-6 md:grid-cols-2">
+          <article class="card p-6">
+            <h2 class="text-xl font-semibold mb-3">Case overview</h2>
+            <p class="text-slate-600">See patient records, hospital verification status, and municipality confirmation in one place.</p>
+          </article>
+          <article class="card p-6">
+            <h2 class="text-xl font-semibold mb-3">Collector details</h2>
+            <p class="text-slate-600">Track collector contact, relation to victim, and submission history for each request.</p>
+          </article>
+        </section>
+      </div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
