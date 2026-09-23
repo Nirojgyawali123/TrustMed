@@ -14,6 +14,8 @@ services:
         generateValue: true
       - key: ENV
         value: production
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: 43200
       - key: PYTHON_VERSION
         value: 3.11.0
       - key: DATABASE_URL

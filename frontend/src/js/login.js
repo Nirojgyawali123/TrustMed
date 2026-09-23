@@ -1,4 +1,4 @@
-import { authAPI } from '/src/api.js';
+import { authAPI, setUser, getDeviceId, getDeviceInfo } from '/src/api.js';
 
 const ROUTES = {
   admin: '../pages/god.html',
@@ -20,7 +20,9 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
   status.textContent = 'Signing in...';
   try {
     const res = await authAPI.login(username, password);
-    sessionStorage.setItem('user', JSON.stringify({ id: res.id, username: res.username, role: res.role, token: res.access_token }));
+    const deviceId = getDeviceId();
+    const deviceInfo = getDeviceInfo();
+    setUser({ id: res.id, username: res.username, role: res.role, token: res.access_token, deviceId, deviceInfo, loginAt: Date.now() });
     const dest = ROUTES[res.role];
     if (dest) window.location.href = dest;
     else status.textContent = 'Unknown role.';

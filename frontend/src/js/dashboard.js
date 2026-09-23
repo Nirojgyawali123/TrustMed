@@ -1,6 +1,6 @@
-import { victimsAPI } from '/src/api.js';
+import { victimsAPI, getUser } from '/src/api.js';
 
-const user = JSON.parse(sessionStorage.getItem('user') || 'null');
+const user = getUser();
 if (!user || user.role !== 'patient') {
   document.getElementById('casesContainer').innerHTML = '<div class="card" style="padding:40px;text-align:center;max-width:400px;margin:40px auto;"><h2 style="font-size:20px;margin-bottom:8px;">Please sign in first</h2><p class="hint">You need a patient account to view your cases.</p><a href="login.html" class="btn btn-primary" style="margin-top:16px;display:inline-flex;">Sign in</a></div>';
   throw new Error('Not authenticated');

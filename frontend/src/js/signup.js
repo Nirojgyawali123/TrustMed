@@ -1,4 +1,4 @@
-import { authAPI } from '/src/api.js';
+import { authAPI, setUser, getDeviceId, getDeviceInfo } from '/src/api.js';
 
 document.getElementById('signupBtn').addEventListener('click', async () => {
   const fullName = document.getElementById('fullName').value.trim();
@@ -30,7 +30,8 @@ document.getElementById('signupBtn').addEventListener('click', async () => {
       username, password,
       full_name: fullName, dob, phone, address, citizenship,
     });
-    sessionStorage.setItem('user', JSON.stringify({ id: res.id, username: res.username, role: res.role, token: res.access_token }));
+    const deviceId = getDeviceId();
+    setUser({ id: res.id, username: res.username, role: res.role, token: res.access_token, deviceId, deviceInfo: getDeviceInfo(), loginAt: Date.now() });
     window.location.href = 'dashboard.html';
   } catch (err) {
     status.textContent = err.message;

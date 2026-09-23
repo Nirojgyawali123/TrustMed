@@ -1,6 +1,6 @@
-import { adminAPI } from '/src/api.js';
+import { adminAPI, getUser } from '/src/api.js';
 
-const user = JSON.parse(sessionStorage.getItem('user') || 'null');
+const user = getUser();
 if (!user || user.role !== 'admin') {
   document.getElementById('adminPage').innerHTML = '<div class="card" style="padding:40px;text-align:center;max-width:400px;margin:40px auto;"><h2 style="font-size:20px;margin-bottom:8px;">God access only</h2><p class="hint">Sign in with the god account (niroj).</p><a href="login.html" class="btn btn-primary" style="margin-top:16px;display:inline-flex;">Go to login</a></div>';
   throw new Error('Not god');

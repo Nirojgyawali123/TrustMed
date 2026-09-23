@@ -22,4 +22,4 @@ if not JWT_SECRET or JWT_SECRET == "techmed-dev-secret-change-in-production":
 FILE_ENC_KEY = os.environ.get("FILE_ENC_KEY", JWT_SECRET)
 
 JWT_ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", str(60 * 24 * 30)))  # 30 days persistent until sign out
