@@ -96,6 +96,7 @@ os.makedirs(os.path.join(UPLOAD_DIR, "reports"), exist_ok=True)
 os.makedirs(os.path.join(UPLOAD_DIR, "collectors"), exist_ok=True)
 os.makedirs(os.path.join(UPLOAD_DIR, "photos"), exist_ok=True)
 os.makedirs(os.path.join(UPLOAD_DIR, "logos"), exist_ok=True)
+os.makedirs(os.path.join(UPLOAD_DIR, "qrcodes"), exist_ok=True)
 
 backend.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
@@ -310,12 +311,18 @@ def create_victim(
 
 @backend.get("/victims/", response_model=list[schemas.VictimResponse])
 def read_public_victims(db: Session = Depends(database.get_db)):
-    return db.query(models.Victim).filter(
+    victims = db.query(models.Victim).filter(
         models.Victim.hospital_verified == True,
         models.Victim.muni_verified == True,
         models.Victim.paused == False,
         models.Victim.rejected == False,
     ).all()
+    # Hide raw bank account number from public — donors use QR instead
+    for v in victims:
+        # Use object attribute without triggering encryption write
+        v.__dict__["bank_account_number"] = "****"
+        v.__dict__["phone"] = "***"
+    return victims
 
 
 @backend.get("/victims/all", response_model=list[schemas.VictimResponse])
@@ -335,6 +342,10 @@ def read_victim(victim_id: int, db: Session = Depends(database.get_db)):
     victim = crud.get_victim(db, victim_id)
     if not victim:
         raise HTTPException(status_code=404, detail="Victim not found")
+    # Public detail: hide sensitive raw numbers, show QR instead
+    if victim.hospital_verified and victim.muni_verified and not victim.paused and not victim.rejected:
+        victim.__dict__["bank_account_number"] = "****"
+        victim.__dict__["phone"] = "***"
     return victim
 
 
@@ -385,6 +396,26 @@ def upload_collector_photo(
     if not collector:
         raise HTTPException(status_code=404, detail="Collector not found")
     return {"photo": collector.photo}
+
+
+@backend.post("/victims/{victim_id}/bank-qr")
+def upload_bank_qr(
+    victim_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(database.get_db),
+    account: models.Account = Depends(require_role("patient")),
+    _: bool = Depends(rate_limit(10)),
+):
+    victim = db.query(models.Victim).filter(models.Victim.id == victim_id).first()
+    if not victim:
+        raise HTTPException(status_code=404, detail="Victim not found")
+    if victim.account_id is not None and victim.account_id != account.id and account.role != "admin":
+        raise HTTPException(status_code=403, detail="Not your case")
+    rel_path = save_uploaded_file(file, "qrcodes", max_mb=2)
+    victim.bank_qr = rel_path
+    db.commit()
+    db.refresh(victim)
+    return {"bank_qr": victim.bank_qr}
 
 
 @backend.post("/victims/{victim_id}/upload-logo")

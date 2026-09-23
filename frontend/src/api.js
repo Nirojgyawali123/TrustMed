@@ -68,6 +68,7 @@ export const victimsAPI = {
   resubmit: (id) => api(`/victims/${id}/resubmit`, { method: 'PATCH' }),
   uploadReport: (id, file) => apiUpload(`/victims/${id}/reports`, file),
   uploadPatientPhoto: (id, file) => apiUpload(`/victims/${id}/patient-photo`, file),
+  uploadBankQr: (id, file) => apiUpload(`/victims/${id}/bank-qr`, file),
   uploadCollectorPhoto: (id, collectorId, file) => apiUpload(`/victims/${id}/collector/${collectorId}/photo`, file),
   uploadLogo: (id, file, role) => apiUpload(`/victims/${id}/upload-logo`, file, { role }),
 };

@@ -10,6 +10,7 @@ if (!user || user.role !== 'patient') {
 let currentStep = 1;
 let selectedFiles = [];
 let patientPhotoFile = null;
+let bankQrFile = null;
 let collectorData = { files: {} };
 let collectorCount = 1;
 
@@ -52,6 +53,7 @@ function validateStep(step) {
     if (!document.getElementById('fBankHolder').value.trim()) { showError('Please enter the account holder name.'); return false; }
     if (!document.getElementById('fBankAccount').value.trim()) { showError('Please enter the account number.'); return false; }
     if (!document.getElementById('fBankBranch').value.trim()) { showError('Please enter the branch.'); return false; }
+    if (!bankQrFile) { showError('Please upload the bank QR code from your bank app.'); return false; }
     return true;
   }
   if (step === 3) {
@@ -109,6 +111,33 @@ function updateSteps() {
   document.getElementById('submitStatus').textContent = '';
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
+
+window.handleBankQr = function(e) {
+  const file = e.target.files[0];
+  const errEl = document.getElementById('bankQrError');
+  const nameEl = document.getElementById('bankQrName');
+  if (!file) return;
+  if (!/\.(jpg|jpeg|png)$/i.test(file.name)) {
+    errEl.textContent = 'Only JPG/PNG accepted.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    errEl.textContent = 'File too large. Max 2 MB.';
+    errEl.style.display = 'block';
+    return;
+  }
+  errEl.style.display = 'none';
+  bankQrFile = file;
+  nameEl.textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const preview = document.getElementById('bankQrPreview');
+    preview.style.display = 'block';
+    document.getElementById('bankQrImg').src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+};
 
 window.handlePatientPhoto = function(e) {
   const file = e.target.files[0];
@@ -271,6 +300,10 @@ window.submitCase = async function() {
 
     if (patientPhotoFile) {
       await victimsAPI.uploadPatientPhoto(result.id, patientPhotoFile);
+    }
+
+    if (bankQrFile) {
+      await victimsAPI.uploadBankQr(result.id, bankQrFile);
     }
 
     for (const file of selectedFiles) {

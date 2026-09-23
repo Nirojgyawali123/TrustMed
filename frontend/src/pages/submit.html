@@ -92,12 +92,24 @@
       <div id="step2" class="step-content" style="display:none;">
         <div class="form-section">
           <h3>Bank details</h3>
-          <p class="section-desc">Where should the collected funds be transferred?</p>
+          <p class="section-desc">Where should the collected funds be transferred? Upload the QR code directly from your bank app.</p>
           <div class="field"><label>Bank name <span class="required">*</span></label><input type="text" id="fBankName" placeholder="e.g. Nepal Bank Limited"></div>
           <div class="field"><label>Account holder name <span class="required">*</span></label><input type="text" id="fBankHolder" placeholder="Full name as on bank account"></div>
           <div class="field-row2">
             <div class="field"><label>Account number <span class="required">*</span></label><input type="text" id="fBankAccount" placeholder="Account number"></div>
             <div class="field"><label>Branch <span class="required">*</span></label><input type="text" id="fBankBranch" placeholder="e.g. Kathmandu Main Branch"></div>
+          </div>
+          <div class="field" style="margin-top:14px;">
+            <label>Bank QR code <span class="required">*</span></label>
+            <p class="hint" style="margin-bottom:8px;font-size:12.5px;">Upload the QR code image from your bank (JPG/PNG). This QR will be shown publicly to donors — your account number itself will stay hidden.</p>
+            <input type="file" id="fBankQr" accept=".jpg,.jpeg,.png" onchange="handleBankQr(event)">
+            <div style="margin-top:8px;display:flex;align-items:center;gap:14px;">
+              <div id="bankQrPreview" style="width:96px;height:96px;border-radius:8px;background:var(--gray-100);display:none;overflow:hidden;border:1px solid var(--gray-200);">
+                <img id="bankQrImg" style="width:100%;height:100%;object-fit:contain;background:#fff;">
+              </div>
+              <div id="bankQrName" class="hint"></div>
+            </div>
+            <div id="bankQrError" class="hint" style="color:var(--danger);margin-top:6px;display:none;"></div>
           </div>
         </div>
         <div style="display:flex;justify-content:space-between;margin-top:24px;">

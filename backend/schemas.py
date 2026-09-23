@@ -137,6 +137,7 @@ class VictimResponse(BaseModel):
     bank_account_number: str
     bank_account_holder: str
     bank_branch: str
+    bank_qr: Optional[str] = None
     hospital_verified: bool
     muni_verified: bool
     paused: bool = False

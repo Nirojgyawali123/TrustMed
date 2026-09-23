@@ -49,6 +49,7 @@ def migrate_schema():
         ("victims", "hospital_logo", "VARCHAR"),
         ("victims", "municipality_logo", "VARCHAR"),
         ("victims", "created_at", "TIMESTAMP"),
+        ("victims", "bank_qr", "VARCHAR"),
         ("collectors", "citizenship_details", "VARCHAR"),
     ]
     with engine.connect() as conn:

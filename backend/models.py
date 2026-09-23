@@ -55,6 +55,7 @@ class Victim(Base):
     bank_account_number = Column(EncryptedString(255), nullable=False)
     bank_account_holder = Column(String, nullable=False)
     bank_branch = Column(String, nullable=False)
+    bank_qr = Column(String, nullable=True)
 
     hospital_verified = Column(Boolean, default=False)
     muni_verified = Column(Boolean, default=False)

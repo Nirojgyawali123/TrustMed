@@ -116,13 +116,17 @@ async function load() {
         </div>
         <div>
           <div class="card" style="padding:18px;">
-            <h3 style="font-size:14px;font-weight:700;margin-bottom:10px;">Bank transfer</h3>
+            <h3 style="font-size:14px;font-weight:700;margin-bottom:10px;">Donate via bank QR</h3>
+            ${v.bank_qr ? `<div style="text-align:center;padding:12px;background:#fff;border:1px solid var(--gray-200);border-radius:8px;margin-bottom:12px;">
+              <img src="/uploads/${v.bank_qr}" alt="Bank QR code for ${v.bank_name}" style="width:180px;height:180px;object-fit:contain;display:block;margin:0 auto 8px;background:#fff;border-radius:6px;">
+              <div class="hint" style="font-size:12px;">Scan with your banking app to donate</div>
+            </div>` : '<p class="hint" style="font-size:12.5px;color:var(--gray-400);">QR code not yet provided.</p>'}
             <div class="detail-panel">
               <div class="kv"><span class="k">Bank</span><span class="v">${v.bank_name}</span></div>
               <div class="kv"><span class="k">Account holder</span><span class="v">${v.bank_account_holder}</span></div>
-              <div class="kv"><span class="k">Account number</span><span class="v">${v.bank_account_number}</span></div>
               <div class="kv"><span class="k">Branch</span><span class="v">${v.bank_branch}</span></div>
             </div>
+            <p class="hint" style="font-size:11.5px;margin-top:10px;line-height:1.4;">Account number is hidden for privacy. Please scan the QR code above to transfer funds directly.</p>
           </div>
 
           ${collectorsHtml ? `<div class="card" style="padding:18px;margin-top:12px;">
