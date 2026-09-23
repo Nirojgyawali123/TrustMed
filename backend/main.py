@@ -295,23 +295,33 @@ def admin_verify_unregistered_hospital(victim_id: int, db: Session = Depends(dat
     victim = crud.get_victim(db, victim_id)
     if not victim or not victim.other_hospital_name:
         raise HTTPException(status_code=404, detail="Unregistered hospital case not found")
-    # Create hospital account if not exists
+    # Create hospital account if not exists — username/password = sanitized hospital name (you will change later)
     existing = db.query(models.Account).filter(models.Account.full_name == victim.other_hospital_name).first()
     if not existing:
-        # generate username from hospital name
-        base = "".join(c for c in victim.other_hospital_name.lower() if c.isalnum())[:12] or f"hosp{victim_id}"
+        import re as _re
+        import bcrypt as _bcrypt
+        # sanitize: lower, replace non-alnum with underscore, collapse underscores
+        raw = victim.other_hospital_name.strip().lower()
+        sanitized = _re.sub(r'[^a-z0-9]+', '_', raw).strip('_')
+        sanitized = sanitized or f"hosp{victim_id}"
+        # keep reasonable length (max 30)
+        base = sanitized[:30].strip('_')
         username = base
         suffix = 1
         while db.query(models.Account).filter(models.Account.username == username).first():
-            username = f"{base}{suffix}"
+            # preserve sanitized base, append suffix
+            suffix_str = f"_{suffix}" if "_" in base else f"{suffix}"
+            # ensure not too long
+            username = f"{base[:24]}{suffix_str}"
             suffix += 1
-        import bcrypt as _bcrypt
-        hashed = _bcrypt.hashpw(b"hospital123", _bcrypt.gensalt()).decode("utf-8")
+        # password = same sanitized name (for now, you will change)
+        pwd_raw = base
+        hashed = _bcrypt.hashpw(pwd_raw.encode("utf-8"), _bcrypt.gensalt()).decode("utf-8")
         acc = models.Account(username=username, password=hashed, role="hospital", full_name=victim.other_hospital_name, address=victim.other_hospital_address, phone=victim.other_hospital_contact)
         db.add(acc)
         db.commit()
         db.refresh(acc)
-        crud.log_action(db, "hospital_created_from_unregistered", admin.username, "admin", victim_id, f"Created hospital {acc.full_name} ({username}) from unregistered request")
+        crud.log_action(db, "hospital_created_from_unregistered", admin.username, "admin", victim_id, f"Created hospital {acc.full_name} ({username}) from unregistered request (pwd=sanitized name)")
     # mark victim as hospital verified and update hospital_name to actual name
     victim.hospital_name = victim.other_hospital_name
     victim.hospital_verified = True

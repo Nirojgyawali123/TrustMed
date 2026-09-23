@@ -73,21 +73,17 @@
           <div class="field"><label>Municipality / Ward <span class="required">*</span></label><input type="text" id="fMunicipality" placeholder="Enter municipality / ward"></div>
           <div class="field">
             <label>Treating hospital <span class="required">*</span></label>
-            <select id="fHospital" onchange="toggleOtherHospital()">
-              <option value="">Select hospital</option>
-              <option>Bir Hospital, Kathmandu</option>
-              <option>Patan Hospital</option>
-              <option>Grande International Hospital</option>
-              <option>Kanti Children's Hospital</option>
-              <option>Other</option>
-            </select>
+            <input type="text" id="fHospital" list="hospitalDatalist" placeholder="Search or select hospital — Butwal" autocomplete="off" oninput="handleHospitalInput()" onchange="toggleOtherHospital()">
+            <datalist id="hospitalDatalist"></datalist>
+            <div id="hospitalDropdown" role="listbox" style="display:none;max-height:180px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:8px;background:#fff;box-shadow:var(--shadow-md);margin-top:4px;"></div>
+            <div class="hint" style="font-size:11.5px;margin-top:4px;">Type to search Butwal hospitals or select from list. Choose “Other” if not found.</div>
           </div>
           <div id="otherHospitalFields" style="display:none;margin-top:12px;padding:14px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;">
             <div style="font-size:13px;font-weight:600;margin-bottom:4px;">Unregistered hospital details <span class="pill amber" style="margin-left:6px;">Sent to admin</span></div>
             <p class="hint" style="font-size:12px;margin-bottom:10px;">This hospital is not in our network. Admin will verify and add it.</p>
-            <div class="field"><label>Hospital name <span class="required">*</span></label><input type="text" id="fOtherHospName" placeholder="Enter hospital name"></div>
-            <div class="field"><label>Hospital address / location <span class="required">*</span></label><input type="text" id="fOtherHospAddress" placeholder="Enter hospital address"></div>
-            <div class="field"><label>Hospital contact <span class="required">*</span></label><input type="tel" id="fOtherHospContact" placeholder="Enter hospital contact"></div>
+            <div class="field"><label>Hospital name <span class="required">*</span></label><input type="text" id="fOtherHospName" placeholder="Enter the name of the hospital"></div>
+            <div class="field"><label>Hospital address / location <span class="required">*</span></label><input type="text" id="fOtherHospAddress" placeholder="Enter the address of the hospital"></div>
+            <div class="field"><label>Hospital contact <span class="required">*</span></label><input type="tel" id="fOtherHospContact" placeholder="Enter the contact of the hospital"></div>
           </div>
           <div class="field"><label>Diagnosis <span class="required">*</span></label><textarea id="fDisease" placeholder="Enter diagnosis"></textarea></div>
           <div class="field"><label>Estimated cost (NPR) <span class="required">*</span></label><input type="number" id="fCost" placeholder="Enter estimated cost"></div>

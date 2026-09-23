@@ -33,38 +33,123 @@ async function prefillAccount() {
 }
 prefillAccount();
 
+const BUTWAL_HOSPITALS = [
+  'Lumbini Provincial Hospital, Butwal',
+  'Universal College of Medical Sciences (UCMS) Teaching Hospital, Bhairahawa',
+  'Crimson Hospital, Butwal',
+  'Siddhartha Children and Women Hospital, Butwal',
+  'Lumbini Eye Institute, Butwal',
+  'Gautam Buddha Community Heart Hospital, Butwal',
+  'City Hospital Butwal',
+  'Butwal Heart Hospital',
+  'Devdaha Medical College, Devdaha',
+  'Lumbini City Hospital, Butwal',
+  'Butwal Model Hospital',
+];
+
 async function loadHospitals() {
-  const sel = document.getElementById('fHospital');
-  if (!sel) return;
+  const input = document.getElementById('fHospital');
+  const datalist = document.getElementById('hospitalDatalist');
+  const dropdown = document.getElementById('hospitalDropdown');
+  if (!input || !datalist) return;
+  let dynamic = [];
   try {
     const hospitals = await adminAPI.listHospitals();
-    const current = sel.value;
-    // keep static first option, rebuild
-    sel.innerHTML = '<option value="">Select hospital</option>';
-    // sort by name
-    hospitals.sort((a,b)=> (a.full_name||'').localeCompare(b.full_name||''));
-    hospitals.forEach(h => {
-      const opt = document.createElement('option');
-      opt.value = h.full_name || h.username;
-      opt.textContent = h.full_name || h.username;
-      sel.appendChild(opt);
-    });
-    const other = document.createElement('option');
-    other.value = 'Other';
-    other.textContent = 'Other';
-    sel.appendChild(other);
-    if (current) sel.value = current;
+    dynamic = hospitals.map(h => h.full_name || h.username).filter(Boolean);
   } catch (e) {
     console.warn('Could not load hospitals', e);
+  }
+  const all = [...new Set([...BUTWAL_HOSPITALS, ...dynamic])].sort();
+  all.push('Other');
+  datalist.innerHTML = '';
+  all.forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    datalist.appendChild(opt);
+  });
+  // also populate styled dropdown if capable
+  if (dropdown) {
+    dropdown.innerHTML = all.map(name => `<div role="option" tabindex="-1" data-value="${name}" style="padding:8px 12px;cursor:pointer;font-size:13.5px;border-bottom:1px solid var(--gray-50);">${name}</div>`).join('');
+    dropdown.querySelectorAll('[role="option"]').forEach(el => {
+      el.addEventListener('click', () => {
+        input.value = el.dataset.value;
+        dropdown.style.display = 'none';
+        input.setAttribute('aria-expanded','false');
+        toggleOtherHospital();
+      });
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); }
+      });
+    });
   }
 }
 loadHospitals();
 
+function isCapablePhone() {
+  try {
+    const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const widthOk = window.innerWidth >= 360;
+    const notSaveData = !navigator.connection?.saveData;
+    const memOk = navigator.deviceMemory ? navigator.deviceMemory > 2 : true;
+    return hasTouch && widthOk && notSaveData && memOk && window.innerWidth < 1024;
+  } catch { return false; }
+}
+
+window.handleHospitalInput = function() {
+  toggleOtherHospital();
+  const input = document.getElementById('fHospital');
+  const dropdown = document.getElementById('hospitalDropdown');
+  if (!dropdown) return;
+  // progressive: capable phone shows styled dropdown, normal keeps native datalist
+  if (isCapablePhone()) {
+    const q = input.value.toLowerCase();
+    const ops = dropdown.querySelectorAll('[role="option"]');
+    let any = false;
+    ops.forEach(el => {
+      const show = !q || el.dataset.value.toLowerCase().includes(q);
+      el.style.display = show ? 'block' : 'none';
+      if (show) any = true;
+    });
+    if (document.activeElement === input && any) {
+      dropdown.style.display = 'block';
+      input.setAttribute('aria-expanded','true');
+    } else if (!q) {
+      dropdown.style.display = 'none';
+      input.setAttribute('aria-expanded','false');
+    }
+  }
+};
+
+// hide styled dropdown on blur/outside
+document.addEventListener('click', (e) => {
+  const dropdown = document.getElementById('hospitalDropdown');
+  const input = document.getElementById('fHospital');
+  if (!dropdown || !input) return;
+  if (!dropdown.contains(e.target) && e.target !== input) {
+    dropdown.style.display = 'none';
+    input.setAttribute('aria-expanded','false');
+  }
+});
+document.getElementById('fHospital')?.addEventListener('focus', () => {
+  if (isCapablePhone()) handleHospitalInput();
+});
+
 window.toggleOtherHospital = function() {
-  const val = document.getElementById('fHospital').value;
+  const val = document.getElementById('fHospital').value.trim();
   const box = document.getElementById('otherHospitalFields');
   if (!box) return;
-  if (val === 'Other') {
+  // treat free text not in list as Other
+  const datalistVals = Array.from(document.querySelectorAll('#hospitalDatalist option')).map(o=>o.value);
+  const isOther = val === 'Other' || (val && !datalistVals.includes(val));
+  if (isOther) {
+    if (val !== 'Other' && val) {
+      // auto-select Other and keep typed name
+      document.getElementById('fOtherHospName').value = val;
+    }
+    box.style.display = 'block';
+    box.setAttribute('aria-hidden','false');
+    if (val !== 'Other') document.getElementById('fHospital').value = 'Other';
+  } else if (val === 'Other') {
     box.style.display = 'block';
     box.setAttribute('aria-hidden','false');
   } else {
