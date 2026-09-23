@@ -2,3 +2,8 @@ fastapi
 uvicorn[standard]
 sqlalchemy
 pydantic
+python-multipart
+bcrypt
+python-jose[cryptography]
+fpdf2
+qrcode[pil]

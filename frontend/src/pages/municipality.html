@@ -3,504 +3,77 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TechMed — Municipality Approval Office</title>
+<title>TrustMed - Municipality Desk</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --canvas:#F6F8F6;
-    --white:#FFFFFF;
-    --ink:#152229;
-    --ink-soft:#4B5D64;
-    --border:#DBE3DF;
-    --border-soft:#E9EEEB;
-
-    --blue-900:#122F45;
-    --blue-700:#1B4965;
-    --blue-500:#2E6E93;
-    --blue-200:#CFE1EC;
-    --blue-100:#EAF2F6;
-
-    --green-700:#1F7A54;
-    --green-500:#2E9E6E;
-    --green-200:#CDE9DA;
-    --green-100:#E9F6EF;
-
-    --red-700:#B3392F;
-    --red-500:#C1443C;
-    --red-200:#F3D3CE;
-    --red-100:#FBEAE7;
-
-    --gold-500:#B08A3E;
-    --gold-100:#F4EBD8;
-
-    --radius-s:6px;
-    --radius-m:10px;
-    --radius-l:18px;
-
-    --font-display:'Fraunces', serif;
-    --font-body:'Inter', sans-serif;
-    --font-mono:'IBM Plex Mono', monospace;
-  }
-
-  *{box-sizing:border-box; margin:0; padding:0;}
-  html,body{height:100%;}
-  body{
-    background:var(--canvas);
-    color:var(--ink);
-    font-family:var(--font-body);
-    -webkit-font-smoothing:antialiased;
-    line-height:1.5;
-  }
-  a{color:inherit; text-decoration:none;}
-  button{font-family:inherit; cursor:pointer; border:none;}
-  ul{list-style:none;}
-  img{max-width:100%; display:block;}
-
-  ::selection{ background:var(--green-200); }
-
-  /* ===================== SHELL / TOPBAR ===================== */
-  .app-shell{ min-height:100vh; display:flex; flex-direction:column; }
-
-  .topbar{
-    background:var(--blue-900);
-    color:var(--white);
-    padding:0 28px;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    height:66px;
-    position:sticky; top:0; z-index:50;
-    border-bottom:1px solid rgba(255,255,255,0.08);
-  }
-  .brand{
-    display:flex; align-items:center; gap:10px;
-    font-family:var(--font-display);
-    font-weight:600;
-    font-size:20px;
-    letter-spacing:0.2px;
-  }
-  .brand .mark{
-    width:30px; height:30px; border-radius:50%;
-    background:linear-gradient(155deg, var(--green-500) 0%, var(--blue-500) 100%);
-    display:flex; align-items:center; justify-content:center;
-    flex-shrink:0;
-  }
-  .brand .mark svg{ width:16px; height:16px; }
-  .brand small{
-    display:block; font-family:var(--font-body); font-weight:500;
-    font-size:10.5px; letter-spacing:1.6px; text-transform:uppercase;
-    color:var(--blue-200); margin-top:1px;
-  }
-
-  .role-switch{
-    display:flex; gap:4px; background:rgba(255,255,255,0.06);
-    padding:4px; border-radius:999px;
-  }
-  .role-switch button{
-    background:transparent; color:var(--blue-200);
-    font-size:13px; font-weight:600; padding:8px 16px;
-    border-radius:999px; transition:all .2s ease;
-    display:flex; align-items:center; gap:7px;
-  }
-  .role-switch button svg{width:14px; height:14px; opacity:0.85;}
-  .role-switch button.active{ background:var(--white); color:var(--blue-900); }
-  .role-switch button:not(.active):hover{ color:var(--white); background:rgba(255,255,255,0.1); }
-
-  .topbar-right{ display:flex; align-items:center; gap:14px; }
-  .page-nav{ display:flex; flex-wrap:wrap; gap:12px; align-items:center; }
-  .page-nav a{ color:var(--blue-100); font-size:13px; font-weight:600; opacity:.9; }
-  .page-nav a:hover{ opacity:1; text-decoration:underline; }
-  .id-chip{
-    font-family:var(--font-mono); font-size:11.5px; color:var(--blue-200);
-    background:rgba(255,255,255,0.07); padding:6px 11px; border-radius:6px;
-    border:1px solid rgba(255,255,255,0.1);
-  }
-  .avatar{
-    width:32px; height:32px; border-radius:50%;
-    background:var(--green-500); color:var(--white);
-    display:flex; align-items:center; justify-content:center;
-    font-weight:700; font-size:13px;
-  }
-
-  /* ===================== LAYOUT ===================== */
-  .view{ display:none; flex:1; }
-  .view.active{ display:block; }
-
-  .page{ max-width:1240px; margin:0 auto; padding:36px 28px 80px; }
-
-  .eyebrow{
-    font-family:var(--font-mono); font-size:11.5px; letter-spacing:1.4px;
-    text-transform:uppercase; font-weight:600;
-  }
-  .eyebrow.blue{ color:var(--blue-500); }
-  .eyebrow.green{ color:var(--green-700); }
-  .eyebrow.red{ color:var(--red-700); }
-
-  h1.page-title{
-    font-family:var(--font-display); font-weight:600;
-    font-size:34px; letter-spacing:-0.3px; margin-top:8px; color:var(--blue-900);
-  }
-  .page-sub{ color:var(--ink-soft); font-size:15px; margin-top:8px; max-width:560px; }
-
-  .card{
-    background:var(--white); border:1px solid var(--border);
-    border-radius:var(--radius-l); padding:26px;
-  }
-
-  .grid-2{ display:grid; grid-template-columns:1.15fr 0.85fr; gap:22px; align-items:start; }
-  .grid-3-stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin:26px 0; }
-
-  .stat-card{
-    background:var(--white); border:1px solid var(--border); border-radius:var(--radius-m);
-    padding:18px 20px;
-  }
-  .stat-card .num{ font-family:var(--font-display); font-size:28px; font-weight:600; color:var(--blue-900); }
-  .stat-card .label{ font-size:12.5px; color:var(--ink-soft); margin-top:3px; }
-  .stat-card.accent-green .num{ color:var(--green-700); }
-  .stat-card.accent-red .num{ color:var(--red-700); }
-
-  /* ===================== VERIFICATION SEAL / CHAIN (signature element) ===================== */
-  .seal{
-    width:46px; height:46px; border-radius:50%; flex-shrink:0;
-    display:flex; align-items:center; justify-content:center;
-    border:2px solid var(--border); background:var(--white);
-    position:relative;
-  }
-  .seal svg{ width:20px; height:20px; }
-  .seal.state-pending{ border-color:var(--border); color:#9AA7A2; }
-  .seal.state-blue{ border-color:var(--blue-500); color:var(--blue-500); box-shadow:0 0 0 3px var(--blue-100); }
-  .seal.state-green{ border-color:var(--green-500); color:var(--green-700); box-shadow:0 0 0 3px var(--green-100); }
-  .seal.state-live{
-    border-color:var(--green-700); background:var(--green-700); color:var(--white);
-    transform:rotate(-6deg);
-  }
-
-  .chain{
-    display:flex; align-items:center; gap:0; margin:22px 0;
-  }
-  .chain-step{ display:flex; flex-direction:column; align-items:center; gap:8px; width:120px; text-align:center; }
-  .chain-step .step-label{ font-size:11.5px; font-weight:600; color:var(--ink-soft); }
-  .chain-step .step-sub{ font-family:var(--font-mono); font-size:10px; color:#9AA7A2; }
-  .chain-line{ flex:1; height:2px; background:var(--border); margin-top:-30px; position:relative; top:-16px; min-width:20px; }
-  .chain-line.done{ background:var(--green-500); }
-
-  /* ===================== BADGES / PILLS ===================== */
-  .pill{
-    display:inline-flex; align-items:center; gap:5px;
-    font-size:11.5px; font-weight:600; padding:5px 11px; border-radius:999px;
-  }
-  .pill svg{ width:12px; height:12px; }
-  .pill.blue{ background:var(--blue-100); color:var(--blue-700); }
-  .pill.green{ background:var(--green-100); color:var(--green-700); }
-  .pill.red{ background:var(--red-100); color:var(--red-700); }
-  .pill.gold{ background:var(--gold-100); color:var(--gold-500); }
-  .pill.gray{ background:var(--border-soft); color:var(--ink-soft); }
-
-  /* ===================== FORMS ===================== */
-  .field{ margin-bottom:18px; }
-  .field label{ display:block; font-size:12.5px; font-weight:600; color:var(--ink); margin-bottom:7px; }
-  .field .hint{ font-size:11.5px; color:var(--ink-soft); margin-top:5px; }
-  input[type=text], input[type=number], textarea, select{
-    width:100%; border:1px solid var(--border); border-radius:var(--radius-s);
-    padding:11px 13px; font-family:var(--font-body); font-size:13.5px; color:var(--ink);
-    background:var(--white); transition:border-color .15s ease;
-  }
-  input:focus, textarea:focus, select:focus{ outline:none; border-color:var(--blue-500); box-shadow:0 0 0 3px var(--blue-100); }
-  textarea{ resize:vertical; min-height:100px; }
-
-  .upload-zone{
-    border:1.5px dashed var(--border); border-radius:var(--radius-m);
-    padding:26px; text-align:center; background:var(--blue-100);
-    display:flex; flex-direction:column; align-items:center; gap:8px;
-    transition:border-color .15s ease;
-  }
-  .upload-zone svg{ width:26px; height:26px; color:var(--blue-500); }
-  .upload-zone .u-title{ font-weight:600; font-size:13.5px; }
-  .upload-zone .u-sub{ font-size:12px; color:var(--ink-soft); }
-
-  .btn{
-    display:inline-flex; align-items:center; justify-content:center; gap:8px;
-    padding:12px 20px; border-radius:var(--radius-s); font-weight:600; font-size:13.5px;
-    transition:all .15s ease; white-space:nowrap;
-  }
-  .btn svg{ width:15px; height:15px; }
-  .btn-primary{ background:var(--blue-700); color:var(--white); }
-  .btn-primary:hover{ background:var(--blue-900); }
-  .btn-green{ background:var(--green-700); color:var(--white); }
-  .btn-green:hover{ background:#175f42; }
-  .btn-red{ background:var(--white); color:var(--red-700); border:1px solid var(--red-200); }
-  .btn-red:hover{ background:var(--red-100); }
-  .btn-ghost{ background:transparent; color:var(--blue-700); border:1px solid var(--border); }
-  .btn-ghost:hover{ background:var(--blue-100); }
-  .btn-block{ width:100%; }
-
-  /* ===================== SECTION HEAD ===================== */
-  .section-head{ display:flex; align-items:baseline; justify-content:space-between; margin:38px 0 16px; }
-  .section-head h2{ font-family:var(--font-display); font-size:20px; font-weight:600; color:var(--blue-900); }
-  .section-head .count{ font-family:var(--font-mono); font-size:12px; color:var(--ink-soft); }
-
-  /* ===================== TABLE (Hospital / Municipality queues) ===================== */
-  .queue{ display:flex; flex-direction:column; gap:12px; }
-  .queue-row{
-    background:var(--white); border:1px solid var(--border); border-radius:var(--radius-m);
-    padding:16px 18px; display:flex; align-items:center; gap:16px; cursor:pointer;
-    transition:border-color .15s ease, box-shadow .15s ease;
-  }
-  .queue-row:hover{ border-color:var(--blue-500); box-shadow:0 2px 10px rgba(27,73,101,0.06); }
-  .queue-row.selected{ border-color:var(--blue-700); box-shadow:0 0 0 3px var(--blue-100); }
-  .queue-avatar{
-    width:42px; height:42px; border-radius:50%; flex-shrink:0;
-    background:var(--blue-100); color:var(--blue-700); font-weight:700; font-size:14px;
-    display:flex; align-items:center; justify-content:center;
-  }
-  .queue-main{ flex:1; min-width:0; }
-  .queue-main .name{ font-weight:600; font-size:14.5px; }
-  .queue-main .meta{ font-size:12px; color:var(--ink-soft); font-family:var(--font-mono); margin-top:2px; }
-  .queue-amt{ text-align:right; }
-  .queue-amt .amt{ font-family:var(--font-mono); font-weight:600; font-size:14.5px; color:var(--blue-900); }
-  .queue-amt .amt-label{ font-size:10.5px; color:var(--ink-soft); }
-
-  /* ===================== DETAIL PANEL ===================== */
-  .detail-panel{ position:sticky; top:88px; }
-  .doc-preview{
-    background:repeating-linear-gradient(135deg, var(--border-soft), var(--border-soft) 10px, var(--white) 10px, var(--white) 20px);
-    border:1px solid var(--border); border-radius:var(--radius-m); height:150px;
-    display:flex; align-items:center; justify-content:center; margin:14px 0;
-  }
-  .doc-preview .doc-badge{
-    background:var(--white); border:1px solid var(--border); border-radius:var(--radius-s);
-    padding:8px 14px; font-size:12px; font-weight:600; color:var(--ink-soft);
-    display:flex; align-items:center; gap:7px;
-  }
-  .kv{ display:flex; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--border-soft); font-size:13px; }
-  .kv:last-child{ border-bottom:none; }
-  .kv .k{ color:var(--ink-soft); }
-  .kv .v{ font-weight:600; font-family:var(--font-mono); font-size:12.5px; }
-
-  /* ===================== CITIZEN / DONOR GRID ===================== */
-  .filter-bar{ display:flex; gap:10px; align-items:center; margin:22px 0 6px; flex-wrap:wrap; }
-  .filter-chip{
-    background:var(--white); border:1px solid var(--border); border-radius:999px;
-    padding:8px 15px; font-size:12.5px; font-weight:600; color:var(--ink-soft);
-  }
-  .filter-chip.active{ background:var(--blue-900); color:var(--white); border-color:var(--blue-900); }
-
-  .campaign-grid{ display:grid; grid-template-columns:repeat(3, 1fr); gap:20px; margin-top:18px; }
-  .campaign-card{
-    background:var(--white); border:1px solid var(--border); border-radius:var(--radius-l);
-    overflow:hidden; display:flex; flex-direction:column; transition:transform .18s ease, box-shadow .18s ease;
-  }
-  .campaign-card:hover{ transform:translateY(-3px); box-shadow:0 10px 26px rgba(18,47,69,0.09); }
-  .campaign-media{
-    height:120px; position:relative;
-    background:linear-gradient(135deg, var(--blue-700), var(--blue-500));
-  }
-  .campaign-media.tone-2{ background:linear-gradient(135deg, var(--green-700), var(--green-500)); }
-  .campaign-media.tone-3{ background:linear-gradient(135deg, #2E6E93, #1F7A54); }
-  .campaign-media .verified-tag{
-    position:absolute; bottom:10px; left:10px; background:rgba(255,255,255,0.95);
-    color:var(--green-700); font-size:10.5px; font-weight:700; padding:5px 10px; border-radius:999px;
-    display:flex; align-items:center; gap:5px;
-  }
-  .campaign-media .verified-tag svg{ width:11px; height:11px; }
-  .campaign-body{ padding:16px 17px 18px; flex:1; display:flex; flex-direction:column; }
-  .campaign-body .c-name{ font-family:var(--font-display); font-weight:600; font-size:16.5px; color:var(--blue-900); }
-  .campaign-body .c-desc{ font-size:12.5px; color:var(--ink-soft); margin:6px 0 12px; line-height:1.5; }
-  .progress-track{ height:7px; background:var(--border-soft); border-radius:999px; overflow:hidden; }
-  .progress-fill{ height:100%; background:linear-gradient(90deg, var(--green-500), var(--blue-500)); border-radius:999px; }
-  .progress-nums{ display:flex; justify-content:space-between; font-size:11.5px; margin-top:7px; }
-  .progress-nums .raised{ font-weight:700; font-family:var(--font-mono); color:var(--blue-900); }
-  .progress-nums .goal{ color:var(--ink-soft); font-family:var(--font-mono); }
-  .chain-mini{ display:flex; gap:5px; margin:12px 0 14px; }
-  .chain-mini .dot{ width:8px; height:8px; border-radius:50%; background:var(--green-500); }
-  .card-actions{ display:flex; gap:8px; margin-top:auto; }
-
-  /* ===================== MODAL / QR ===================== */
-  .modal-overlay{
-    position:fixed; inset:0; background:rgba(18,29,34,0.55); backdrop-filter:blur(2px);
-    display:none; align-items:center; justify-content:center; z-index:100; padding:20px;
-  }
-  .modal-overlay.open{ display:flex; }
-  .modal{
-    background:var(--white); border-radius:var(--radius-l); max-width:420px; width:100%;
-    padding:30px; text-align:center; position:relative;
-  }
-  .modal .close-x{ position:absolute; top:16px; right:16px; color:var(--ink-soft); background:transparent; }
-  .qr-box{
-    width:170px; height:170px; margin:20px auto; background:var(--white);
-    border:1px solid var(--border); border-radius:var(--radius-m); padding:12px;
-  }
-  .qr-box svg{ width:100%; height:100%; }
-
-  /* ===================== FOOTNOTE / TRUST STRIP ===================== */
-  .trust-strip{
-    margin-top:40px; padding:20px 24px; border-radius:var(--radius-m);
-    background:var(--blue-900); color:var(--blue-200); display:flex; gap:26px;
-    align-items:center; flex-wrap:wrap; font-size:12.5px;
-  }
-  .trust-strip .t-item{ display:flex; align-items:center; gap:8px; }
-  .trust-strip svg{ width:15px; height:15px; color:var(--green-500); }
-
-  @media (max-width: 980px){
-    .grid-2{ grid-template-columns:1fr; }
-    .campaign-grid{ grid-template-columns:repeat(2,1fr); }
-    .grid-3-stats{ grid-template-columns:1fr; }
-    .role-switch span{ display:none; }
-  }
-  @media (max-width: 640px){
-    .campaign-grid{ grid-template-columns:1fr; }
-    .topbar{ padding:0 14px; }
-    .role-switch button{ padding:8px 10px; }
-  }
-</style>
-
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
-
-<!-- ============== ICON SPRITES ============== -->
-<svg width="0" height="0" style="position:absolute">
-  <symbol id="icon-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 5v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V5l-8-3Z"/><path d="m9 12 2 2 4-4"/></symbol>
-  <symbol id="icon-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></symbol>
-  <symbol id="icon-hospital" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V7l8-4 8 4v14"/><path d="M9 21v-6h6v6"/><path d="M12 7v4M10 9h4"/></symbol>
-  <symbol id="icon-building" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M9 8h1M14 8h1M9 12h1M14 12h1M9 16h1M14 16h1"/></symbol>
-  <symbol id="icon-heart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.5-9.5-9C.8 7.6 2.3 4 6 4c2 0 3.5 1.2 4 2.6C10.5 5.2 12 4 14 4c3.7 0 5.2 3.6 3.5 7-2.5 4.5-9.5 9-9.5 9Z"/></symbol>
-  <symbol id="icon-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></symbol>
-  <symbol id="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
-  <symbol id="icon-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></symbol>
-  <symbol id="icon-flag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18"/><path d="M5 4h11l-2 4 2 4H5"/></symbol>
-  <symbol id="icon-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
-  <symbol id="icon-stamp" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 14v-3a4 4 0 1 1 8 0v3"/><path d="M4 21h16"/><path d="M6 21v-4h12v4"/></symbol>
-  <symbol id="icon-qr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM19 14h2v2h-2zM14 19h2v2h-2zM19 19h2v2h-2z"/></symbol>
-  <symbol id="icon-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
-</svg>
-
-
-<div class="app-shell">
-  <div class="topbar">
-    <div class="brand">
-      <span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2"><use href="#icon-shield"/></svg></span>
-      <span>TechMed<small>Verified Medical Aid</small></span>
-    </div>
-    <nav class="page-nav">
-      <a href="/index.html">Home</a>
-      <a href="/src/pages/login.html">Login</a>
-      <a href="/src/pages/patients.html">Patients</a>
-      <a href="/src/pages/hospital.html">Hospital</a>
-      <a href="/src/pages/municipality.html">Municipality</a>
-      <a href="/src/pages/citizen.html">Citizen</a>
-    </nav>
-    <div class="pill green" style="font-size:12px; padding:7px 14px;">MUNICIPALITY ACCESS</div>
-    <div class="topbar-right">
-      <span class="id-chip">MUN-KTM10</span>
-      <div class="avatar">W</div>
-    </div>
+<div class="topbar">
+  <div class="brand">
+    <span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2"><path d="M12 2 4 5v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V5l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg></span>
+    <span>TrustMed<span class="pill amber" style="margin-left:8px;">Municipality</span></span>
   </div>
-
-  <div class="view active">
-    <div class="page">
-      <span class="eyebrow green">MUNICIPALITY APPROVAL OFFICE</span>
-      <h1 class="page-title">Confirm the person. Release the case.</h1>
-      <p class="page-sub">Hospital-verified cases arrive here for residency and identity clearance. Once approved, the case is stamped and published for citizens to see and support.</p>
-
-      <div class="grid-3-stats">
-        <div class="stat-card"><div class="num">9</div><div class="label">Awaiting approval</div></div>
-        <div class="stat-card accent-green"><div class="num">142</div><div class="label">Approved &amp; live</div></div>
-        <div class="stat-card"><div class="num">₨ 2.1Cr</div><div class="label">Enabled for fundraising</div></div>
-      </div>
-
-      <div class="grid-2">
-        <div>
-          <div class="section-head"><h2>Hospital-verified, awaiting your seal</h2><span class="count">9 pending</span></div>
-          <div class="queue" id="munQueue">
-            <div class="queue-row selected" data-id="1" data-name="Sunita Rai">
-              <div class="queue-avatar">SR</div>
-              <div class="queue-main"><div class="name">Sunita Rai <span class="pill green" style="margin-left:6px;"><svg><use href="#icon-check"/></svg>Hospital verified</span></div><div class="meta">CASE-2026-00417 · Ward 10, Kathmandu Metro</div></div>
-              <div class="queue-amt"><div class="amt">₨ 8,50,000</div><div class="amt-label">estimate</div></div>
-            </div>
-            <div class="queue-row" data-id="2" data-name="Bikash Thapa">
-              <div class="queue-avatar">BT</div>
-              <div class="queue-main"><div class="name">Bikash Thapa <span class="pill green" style="margin-left:6px;"><svg><use href="#icon-check"/></svg>Hospital verified</span></div><div class="meta">CASE-2026-00418 · Ward 4, Lalitpur Metro</div></div>
-              <div class="queue-amt"><div class="amt">₨ 4,20,000</div><div class="amt-label">estimate</div></div>
-            </div>
-            <div class="queue-row" data-id="3" data-name="Mina Gurung">
-              <div class="queue-avatar">MG</div>
-              <div class="queue-main"><div class="name">Mina Gurung <span class="pill green" style="margin-left:6px;"><svg><use href="#icon-check"/></svg>Hospital verified</span></div><div class="meta">CASE-2026-00419 · Ward 2, Bhaktapur</div></div>
-              <div class="queue-amt"><div class="amt">₨ 12,10,000</div><div class="amt-label">estimate</div></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="detail-panel">
-          <div class="card">
-            <span class="eyebrow green">IDENTITY &amp; RESIDENCY CHECK</span>
-            <h3 style="font-family:var(--font-display); font-size:19px; margin-top:6px;">Sunita Rai</h3>
-
-            <div class="kv"><span class="k">Citizenship No.</span><span class="v">10-01-73-04521</span></div>
-            <div class="kv"><span class="k">Registered ward</span><span class="v">Ward 10</span></div>
-            <div class="kv"><span class="k">Address match</span><span class="v" style="color:var(--green-700);">CONFIRMED</span></div>
-            <div class="kv"><span class="k">Household record</span><span class="v" style="color:var(--green-700);">ON FILE</span></div>
-            <div class="kv"><span class="k">Hospital seal</span><span class="v" style="color:var(--green-700);">BIR HOSPITAL ✓</span></div>
-
-            <div class="doc-preview" style="height:90px; margin-top:16px;">
-              <div class="doc-badge"><svg><use href="#icon-user"/></svg>citizenship_card.jpg</div>
-            </div>
-
-            <div style="display:flex; gap:10px; margin-top:18px;">
-              <button id="munApproveBtn" class="btn btn-green btn-block"><svg><use href="#icon-stamp"/></svg>Approve &amp; publish case</button>
-              <button id="munRejectBtn" class="btn btn-red"><svg><use href="#icon-x"/></svg>Reject</button>
-            </div>
-            <div class="hint" style="text-align:center; margin-top:10px;">Publishing generates a public case ID and donation QR — no personal ID numbers are shown to citizens.</div>
-          </div>
-        </div>
-      </div>
-    </div>
+  <div class="nav">
+    <a href="index.html">Home</a>
+    <a href="cases.html">Browse Cases</a>
   </div>
-
-
+  <div class="nav-right">
+    <a href="login.html" class="btn btn-outline btn-sm">Sign out</a>
   </div>
 </div>
 
-<script type="module">
-  import { victimsAPI } from '/src/api.js';
+<div class="page">
+  <div style="padding:20px 0 14px;">
+    <h1 class="page-title">Verify patient identity</h1>
+    <p class="page-sub">Confirm patient identity and address for cases that have been verified by the hospital.</p>
+  </div>
 
-  const munQueue = document.getElementById('munQueue');
-  const approveBtn = document.getElementById('munApproveBtn');
-  const rejectBtn = document.getElementById('munRejectBtn');
+  <div class="grid-3" style="margin-bottom:16px;">
+    <div class="stat-card"><div class="num" id="statPending">0</div><div class="label">Pending review</div></div>
+    <div class="stat-card green"><div class="num" id="statApproved">0</div><div class="label">Approved & live</div></div>
+    <div class="stat-card"><div class="num" id="statTotal">0</div><div class="label">Total cases</div></div>
+  </div>
 
-  function getSelectedMunRow() {
-    return munQueue?.querySelector('.queue-row.selected');
-  }
+  <div class="grid-2">
+    <div>
+      <div class="section-head"><h2>Verification queue</h2><span class="count" id="queueCount">0 pending</span></div>
+      <div class="queue" id="munQueue"><div class="empty-state">Loading...</div></div>
+    </div>
+    <div>
+      <div class="card">
+        <div style="font-size:13px;font-weight:600;color:var(--primary);margin-bottom:8px;">CASE DETAIL</div>
+        <div id="detailContent"><p class="hint">Select a case from the queue.</p></div>
+        <div id="logoSection" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--gray-100);">
+          <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Upload your municipality logo</div>
+          <p class="hint" style="font-size:12px;margin-bottom:10px;">After approval, your logo will appear on the case as a trust badge.</p>
+          <input type="file" id="logoInput" accept=".jpg,.jpeg,.png" onchange="handleLogoUpload(event)">
+        </div>
+        <div style="display:flex;gap:10px;margin-top:16px;" id="actionButtons" hidden>
+          <button class="btn btn-green btn-block" id="approveBtn">Verify &amp; publish case</button>
+          <button class="btn btn-danger" id="rejectBtn">Reject</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-  if (munQueue) {
-    munQueue.addEventListener('click', (e) => {
-      const row = e.target.closest('.queue-row');
-      if (!row) return;
-      munQueue.querySelectorAll('.queue-row').forEach(r => r.classList.remove('selected'));
-      row.classList.add('selected');
-    });
-  }
+<div class="modal-overlay" id="rejectModal">
+  <div class="modal" style="text-align:left;max-width:440px;">
+    <button class="close-x" onclick="closeRejectModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    <h3 style="font-size:17px;font-weight:700;margin-bottom:4px;">Reject case</h3>
+    <p class="hint" style="margin-bottom:16px;">Optionally provide a reason. The patient can resubmit after fixing issues.</p>
+    <div class="field">
+      <label>Reason for rejection (optional)</label>
+      <textarea id="rejectReason" placeholder="e.g. Address mismatch, identity documents unclear..." style="min-height:80px;"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn btn-outline" onclick="closeRejectModal()">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmReject()">Reject case</button>
+    </div>
+  </div>
+</div>
 
-  approveBtn?.addEventListener('click', async () => {
-    const selected = getSelectedMunRow();
-    if (!selected) return alert('Please select a case to approve.');
-    const victimId = parseInt(selected.dataset.id, 10);
-    if (!victimId) return alert('Selected case has no ID.');
-
-    try {
-      await victimsAPI.verify(victimId, 'municipality');
-      alert(`Municipality approved case for ${selected.dataset.name}`);
-    } catch (error) {
-      console.error('Municipality verify error:', error);
-      alert('Unable to approve case. Make sure the backend is running.');
-    }
-  });
-
-  rejectBtn?.addEventListener('click', () => {
-    const selected = getSelectedMunRow();
-    if (!selected) return alert('Please select a case to reject.');
-    alert(`Municipality rejected ${selected.dataset.name} locally.`);
-  });
-</script>
+<script type="module" src="../js/municipality.js"></script>
 </body>
 </html>

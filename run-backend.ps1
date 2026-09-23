@@ -11,4 +11,4 @@ if (-not (Test-Path $pythonExe)) {
 & $pythonExe -m pip install --upgrade pip
 & $pythonExe -m pip install -r "$scriptDir\requirements.txt"
 $env:PYTHONPATH = $scriptDir
-& $pythonExe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000 --app-dir .
+& $pythonExe -m uvicorn backend.main:backend --reload --host 127.0.0.1 --port 8000 --app-dir .

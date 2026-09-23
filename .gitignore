@@ -19,7 +19,15 @@ dist-ssr/
 !.env.example
 
 .claude/
+.agents/
+.opencode/
 .vscode/*
 !.vscode/extensions.json
 .idea/
 .DS_Store
+kiro-cli.exe
+skills-lock.json
+opencode.json
+uploads/
+frontend/techmed.db
+frontend/techmed.db-journal

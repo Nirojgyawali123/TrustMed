@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TrustMed - Browse Cases</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div class="topbar">
+  <div class="brand">
+    <span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2"><path d="M12 2 4 5v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V5l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg></span>
+    <span>TrustMed<small>Verified Medical Aid</small></span>
+  </div>
+  <div class="nav">
+    <a href="index.html">Home</a>
+    <a href="cases.html">Browse Cases</a>
+    <a href="signup.html">Start a Fundraiser</a>
+  </div>
+  <div class="nav-right">
+    <a href="login.html" class="btn btn-outline btn-sm">Sign in</a>
+  </div>
+</div>
+
+<div class="page">
+  <div style="padding:24px 0 16px;">
+    <h1 class="page-title">All verified cases</h1>
+    <p class="page-sub">Every case here has been confirmed by both the treating hospital and the municipal ward office.</p>
+  </div>
+  <div id="caseGrid">
+    <div class="empty-state">Loading cases…</div>
+  </div>
+</div>
+
+<script type="module" src="../js/cases.js"></script>
+</body>
+</html>

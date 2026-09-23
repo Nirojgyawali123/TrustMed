@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TrustMed - My Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div class="topbar">
+  <div class="brand">
+    <span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2"><path d="M12 2 4 5v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V5l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg></span>
+    <span>TrustMed<span class="pill blue" style="margin-left:8px;">Patient</span></span>
+  </div>
+  <div class="nav">
+    <a href="index.html">Home</a>
+    <a href="cases.html">Browse Cases</a>
+  </div>
+  <div class="nav-right">
+    <a href="submit.html" class="btn btn-primary btn-sm">Start a fundraiser</a>
+    <a href="login.html" class="btn btn-outline btn-sm">Sign out</a>
+  </div>
+</div>
+
+ <div class="page">
+  <div style="padding:20px 0 14px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;">
+    <div>
+      <h1 class="page-title" style="margin:0;">My cases</h1>
+      <p class="page-sub" style="margin:4px 0 0;">Track the status of your medical fundraisers.</p>
+    </div>
+    <a href="submit.html" class="btn btn-primary btn-sm">+ New fundraiser</a>
+  </div>
+
+  <div id="notifications" style="display:none;"></div>
+
+  <div id="casesContainer">
+    <div class="empty-state" id="loadingState">Loading your cases…</div>
+  </div>
+
+  <div id="emptyState" style="display:none;">
+    <div class="card" style="text-align:center;padding:40px 24px;max-width:480px;margin:16px auto;">
+      <div style="width:56px;height:56px;border-radius:50%;background:var(--gray-100);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--gray-400)" stroke-width="1.9" style="width:24px;height:24px;"><path d="M12 2 4 5v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V5l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+      </div>
+      <h2 style="font-size:18px;font-weight:700;margin-bottom:6px;">No cases yet</h2>
+      <p class="hint" style="margin-bottom:16px;">Start your first medical fundraiser to get help from donors.</p>
+      <a href="submit.html" class="btn btn-primary">Start a fundraiser</a>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="../js/dashboard.js"></script>
+</body>
+</html>

@@ -2,7 +2,7 @@
   "name": "techmed",
   "private": true,
   "scripts": {
-    "backend": "python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000 --app-dir ."
+    "backend": "python -m uvicorn backend.main:backend --reload --host 127.0.0.1 --port 8000 --app-dir ."
   },
   "devDependencies": {
     "autoprefixer": "^10.5.4",

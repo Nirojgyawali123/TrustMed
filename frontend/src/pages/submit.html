@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TrustMed - Start a Fundraiser</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div class="topbar">
+  <div class="brand">
+    <span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2"><path d="M12 2 4 5v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V5l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg></span>
+    <span>TrustMed<span class="pill blue" style="margin-left:8px;">Patient</span></span>
+  </div>
+  <div class="nav">
+    <a href="index.html">Home</a>
+    <a href="cases.html">Browse Cases</a>
+  </div>
+  <div class="nav-right">
+    <a href="login.html" class="btn btn-outline btn-sm">Sign out</a>
+  </div>
+</div>
+
+<div class="page">
+  <div id="formView">
+    <div style="max-width:720px;margin:0 auto;">
+      <div style="padding:24px 0 16px;text-align:center;">
+        <h1 class="page-title" style="text-align:center;">Start a medical fundraiser</h1>
+        <p class="page-sub" style="margin:6px auto 0;text-align:center;">Your case will be verified by the hospital and municipality before going public.</p>
+      </div>
+
+      <div class="step-indicator" id="stepIndicator">
+        <div class="step active" data-step="1"><span class="step-num">1</span><span class="step-label">Patient Info</span></div>
+        <div class="step-connector"></div>
+        <div class="step" data-step="2"><span class="step-num">2</span><span class="step-label">Bank Details</span></div>
+        <div class="step-connector"></div>
+        <div class="step" data-step="3"><span class="step-num">3</span><span class="step-label">Reports</span></div>
+        <div class="step-connector"></div>
+        <div class="step" data-step="4"><span class="step-num">4</span><span class="step-label">Collectors</span></div>
+        <div class="step-connector"></div>
+        <div class="step" data-step="5"><span class="step-num">5</span><span class="step-label">Note</span></div>
+      </div>
+      <div class="step-progress-label" id="stepProgressLabel">Step 1 of 5 · Patient info</div>
+      <div class="step-progress"><div class="step-progress-fill" id="stepProgressFill" style="width:20%"></div></div>
+
+      <div id="step1" class="step-content">
+        <div class="form-section">
+          <h3>Patient information</h3>
+          <p class="section-desc">Pre-filled from your account. You can update your details in your profile.</p>
+          <div class="field-row2">
+            <div class="field"><label>Full name</label><input type="text" id="fName" disabled></div>
+            <div class="field"><label>Date of birth</label><input type="text" id="fDob" disabled></div>
+          </div>
+          <div class="field"><label>Address</label><input type="text" id="fAddress" disabled></div>
+          <div class="field-row2">
+            <div class="field"><label>Phone</label><input type="tel" id="fPhone" disabled></div>
+            <div class="field"><label>Citizenship</label><input type="text" id="fCitizenship" disabled></div>
+          </div>
+          <hr style="margin:20px 0;border-color:var(--gray-200);">
+          <div class="field">
+            <label>Patient photo <span class="required">*</span></label>
+            <input type="file" id="fPatientPhoto" accept=".jpg,.jpeg,.png" onchange="handlePatientPhoto(event)">
+            <div style="margin-top:8px;display:flex;align-items:center;gap:14px;">
+              <div id="patPhotoPreview" style="width:80px;height:80px;border-radius:8px;background:var(--gray-100);display:none;overflow:hidden;">
+                <img id="patPhotoImg" style="width:100%;height:100%;object-fit:cover;">
+              </div>
+              <div id="patPhotoName" class="hint"></div>
+            </div>
+          </div>
+          <div class="field"><label>Municipality / Ward <span class="required">*</span></label><input type="text" id="fMunicipality" placeholder="e.g. Kathmandu Metro, Ward 10"></div>
+          <div class="field">
+            <label>Treating hospital <span class="required">*</span></label>
+            <select id="fHospital">
+              <option value="">Select hospital</option>
+              <option>Bir Hospital, Kathmandu</option>
+              <option>Patan Hospital</option>
+              <option>Grande International Hospital</option>
+              <option>Kanti Children's Hospital</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="field"><label>Diagnosis <span class="required">*</span></label><textarea id="fDisease" placeholder="e.g. Stage 2 chronic kidney disease requiring dialysis"></textarea></div>
+          <div class="field"><label>Estimated cost (NPR) <span class="required">*</span></label><input type="number" id="fCost" placeholder="e.g. 850000"></div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:24px;">
+          <button class="btn btn-primary" onclick="goStep(2)">Next: Bank Details</button>
+        </div>
+      </div>
+
+      <div id="step2" class="step-content" style="display:none;">
+        <div class="form-section">
+          <h3>Bank details</h3>
+          <p class="section-desc">Where should the collected funds be transferred?</p>
+          <div class="field"><label>Bank name <span class="required">*</span></label><input type="text" id="fBankName" placeholder="e.g. Nepal Bank Limited"></div>
+          <div class="field"><label>Account holder name <span class="required">*</span></label><input type="text" id="fBankHolder" placeholder="Full name as on bank account"></div>
+          <div class="field-row2">
+            <div class="field"><label>Account number <span class="required">*</span></label><input type="text" id="fBankAccount" placeholder="Account number"></div>
+            <div class="field"><label>Branch <span class="required">*</span></label><input type="text" id="fBankBranch" placeholder="e.g. Kathmandu Main Branch"></div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:24px;">
+          <button class="btn btn-outline" onclick="goStep(1)">Back</button>
+          <button class="btn btn-primary" onclick="goStep(3)">Next: Medical Reports</button>
+        </div>
+      </div>
+
+      <div id="step3" class="step-content" style="display:none;">
+        <div class="form-section">
+          <h3>Medical reports <span class="required">*</span></h3>
+          <p class="section-desc">Upload at least one medical report (JPG or PNG). These will be reviewed by the hospital to verify your diagnosis.</p>
+          <div class="file-upload" id="reportUpload" onclick="document.getElementById('fileInput').click()">
+            <div class="upload-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+            <div class="upload-text">Click to upload medical reports</div>
+            <div class="upload-hint">JPG or PNG, at least 1 file required</div>
+          </div>
+          <input type="file" id="fileInput" accept=".jpg,.jpeg,.png" multiple onchange="handleFileSelect(event)">
+          <div class="file-list" id="fileList"></div>
+          <div id="fileError" class="hint" style="color:var(--danger);margin-top:8px;display:none;"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:24px;">
+          <button class="btn btn-outline" onclick="goStep(2)">Back</button>
+          <button class="btn btn-primary" onclick="goStep(4)">Next: Collectors</button>
+        </div>
+      </div>
+
+      <div id="step4" class="step-content" style="display:none;">
+        <div class="form-section">
+          <div class="toggle-row">
+            <div class="toggle">
+              <input type="checkbox" id="fHasCollector" onchange="toggleCollector()">
+              <label class="slider" for="fHasCollector"></label>
+            </div>
+            <label for="fHasCollector">Someone collecting cash donations on behalf of the patient?</label>
+          </div>
+          <div id="collectorSection" style="display:none;">
+            <div id="collectorsContainer">
+              <div class="collector-entry" data-index="0">
+                <h4 style="margin-bottom:12px;font-size:14px;color:var(--gray-600);">Collector 1</h4>
+                <div class="field-row2">
+                  <div class="field"><label>Full name <span class="required">*</span></label><input type="text" class="colName" placeholder="Full name"></div>
+                  <div class="field"><label>Contact number <span class="required">*</span></label><input type="tel" class="colContact" placeholder="98XXXXXXXX"></div>
+                </div>
+                <div class="field"><label>Address <span class="required">*</span></label><input type="text" class="colAddress" placeholder="Full address"></div>
+                <div class="field"><label>Relation to patient <span class="required">*</span></label><input type="text" class="colRelation" placeholder="e.g. Father, Mother, Spouse"></div>
+                <div class="field">
+                  <label>Citizenship details (if available)</label>
+                  <input type="text" class="colCitizenship" placeholder="Citizenship number">
+                </div>
+                <div class="field">
+                  <label>Face photo <span class="required">*</span></label>
+                  <input type="file" class="colPhoto" accept=".jpg,.jpeg,.png" onchange="handleCollectorPhoto(event, 0)">
+                  <div style="margin-top:8px;display:flex;align-items:center;gap:14px;">
+                    <div class="colPhotoPreview" style="width:72px;height:72px;border-radius:50%;background:var(--gray-100);display:none;overflow:hidden;">
+                      <img class="colPhotoImg" style="width:100%;height:100%;object-fit:cover;">
+                    </div>
+                    <div class="colPhotoName hint"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <button class="btn btn-outline btn-sm" onclick="addCollector()" style="margin-top:12px;">+ Add Another Collector</button>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:24px;">
+          <button class="btn btn-outline" onclick="goStep(3)">Back</button>
+          <button class="btn btn-primary" onclick="goStep(5)">Next: Note to Donors</button>
+        </div>
+      </div>
+
+      <div id="step5" class="step-content" style="display:none;">
+        <div class="form-section">
+          <h3>Note to donors</h3>
+          <p class="section-desc">A short message for people who donate to your case (optional).</p>
+          <div class="field">
+            <textarea id="fNote" placeholder="Write a brief message to your donors..." style="min-height:120px;"></textarea>
+          </div>
+        </div>
+        <div id="submitStatus" class="hint" style="margin:16px 0;text-align:center;"></div>
+        <div style="display:flex;justify-content:space-between;margin-top:24px;">
+          <button class="btn btn-outline" onclick="goStep(4)">Back</button>
+          <button class="btn btn-primary" id="submitBtn" onclick="submitCase()" style="padding:14px 32px;font-size:15px;">Submit for verification</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="successView" style="display:none;">
+    <div class="card" style="text-align:center;padding:40px 24px;max-width:520px;margin:32px auto;">
+      <div style="width:56px;height:56px;border-radius:50%;background:var(--success-light);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2.4" style="width:26px;height:26px;"><path d="M20 6 9 17l-5-5"/></svg>
+      </div>
+      <h2 style="font-size:20px;font-weight:700;margin-bottom:6px;">Your case has been submitted</h2>
+      <p class="hint" style="margin-bottom:4px;">Case ID <strong id="displayCaseId" style="font-size:18px;color:var(--primary);">#</strong></p>
+      <p class="hint" style="margin-bottom:8px;">Status: <strong id="displayStatus" style="color:var(--warning);">Pending Hospital Verification</strong></p>
+      <p class="hint" style="margin-bottom:20px;">You will be notified when the hospital and municipality review your case.</p>
+      <button class="btn btn-outline" onclick="window.location.href='submit.html'">Submit another case</button>
+    </div>
+  </div>
+</div>
+<script type="module" src="../js/submit.js"></script>
+</body>
+</html>
