@@ -211,12 +211,12 @@ window.addCollector = function() {
       <button class="btn btn-sm btn-danger" onclick="removeCollector(${idx})">Remove</button>
     </div>
     <div class="field-row2">
-      <div class="field"><label>Full name <span class="required">*</span></label><input type="text" class="colName" placeholder="Full name"></div>
-      <div class="field"><label>Contact number <span class="required">*</span></label><input type="tel" class="colContact" placeholder="98XXXXXXXX"></div>
+      <div class="field"><label>Full name <span class="required">*</span></label><input type="text" class="colName" placeholder="Enter full name"></div>
+      <div class="field"><label>Contact number <span class="required">*</span></label><input type="tel" class="colContact" placeholder="Enter contact number"></div>
     </div>
-    <div class="field"><label>Address <span class="required">*</span></label><input type="text" class="colAddress" placeholder="Full address"></div>
-    <div class="field"><label>Relation to patient <span class="required">*</span></label><input type="text" class="colRelation" placeholder="e.g. Father, Mother, Spouse"></div>
-    <div class="field"><label>Citizenship details (if available)</label><input type="text" class="colCitizenship" placeholder="Citizenship number"></div>
+    <div class="field"><label>Address <span class="required">*</span></label><input type="text" class="colAddress" placeholder="Enter address"></div>
+    <div class="field"><label>Relation to patient <span class="required">*</span></label><input type="text" class="colRelation" placeholder="Enter relation to patient"></div>
+    <div class="field"><label>Citizenship details (if available)</label><input type="text" class="colCitizenship" placeholder="Enter citizenship number"></div>
     <div class="field">
       <label>Face photo <span class="required">*</span></label>
       <input type="file" class="colPhoto" accept=".jpg,.jpeg,.png" onchange="handleCollectorPhoto(event, ${idx})">

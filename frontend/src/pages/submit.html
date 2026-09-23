@@ -69,7 +69,7 @@
               <div id="patPhotoName" class="hint"></div>
             </div>
           </div>
-          <div class="field"><label>Municipality / Ward <span class="required">*</span></label><input type="text" id="fMunicipality" placeholder="e.g. Kathmandu Metro, Ward 10"></div>
+          <div class="field"><label>Municipality / Ward <span class="required">*</span></label><input type="text" id="fMunicipality" placeholder="Enter municipality / ward"></div>
           <div class="field">
             <label>Treating hospital <span class="required">*</span></label>
             <select id="fHospital">
@@ -81,8 +81,8 @@
               <option>Other</option>
             </select>
           </div>
-          <div class="field"><label>Diagnosis <span class="required">*</span></label><textarea id="fDisease" placeholder="e.g. Stage 2 chronic kidney disease requiring dialysis"></textarea></div>
-          <div class="field"><label>Estimated cost (NPR) <span class="required">*</span></label><input type="number" id="fCost" placeholder="e.g. 850000"></div>
+          <div class="field"><label>Diagnosis <span class="required">*</span></label><textarea id="fDisease" placeholder="Enter diagnosis"></textarea></div>
+          <div class="field"><label>Estimated cost (NPR) <span class="required">*</span></label><input type="number" id="fCost" placeholder="Enter estimated cost"></div>
         </div>
         <div style="display:flex;justify-content:flex-end;margin-top:24px;">
           <button class="btn btn-primary" onclick="goStep(2)">Next: Bank Details</button>
@@ -93,11 +93,11 @@
         <div class="form-section">
           <h3>Bank details</h3>
           <p class="section-desc">Where should the collected funds be transferred? Upload the QR code directly from your bank app.</p>
-          <div class="field"><label>Bank name <span class="required">*</span></label><input type="text" id="fBankName" placeholder="e.g. Nepal Bank Limited"></div>
-          <div class="field"><label>Account holder name <span class="required">*</span></label><input type="text" id="fBankHolder" placeholder="Full name as on bank account"></div>
+          <div class="field"><label>Bank name <span class="required">*</span></label><input type="text" id="fBankName" placeholder="Enter bank name"></div>
+          <div class="field"><label>Account holder name <span class="required">*</span></label><input type="text" id="fBankHolder" placeholder="Enter account holder name"></div>
           <div class="field-row2">
-            <div class="field"><label>Account number <span class="required">*</span></label><input type="text" id="fBankAccount" placeholder="Account number"></div>
-            <div class="field"><label>Branch <span class="required">*</span></label><input type="text" id="fBankBranch" placeholder="e.g. Kathmandu Main Branch"></div>
+            <div class="field"><label>Account number <span class="required">*</span></label><input type="text" id="fBankAccount" placeholder="Enter account number"></div>
+            <div class="field"><label>Branch <span class="required">*</span></label><input type="text" id="fBankBranch" placeholder="Enter branch name"></div>
           </div>
           <div class="field" style="margin-top:14px;">
             <label>Bank QR code <span class="required">*</span></label>
@@ -151,14 +151,14 @@
               <div class="collector-entry" data-index="0">
                 <h4 style="margin-bottom:12px;font-size:14px;color:var(--gray-600);">Collector 1</h4>
                 <div class="field-row2">
-                  <div class="field"><label>Full name <span class="required">*</span></label><input type="text" class="colName" placeholder="Full name"></div>
-                  <div class="field"><label>Contact number <span class="required">*</span></label><input type="tel" class="colContact" placeholder="98XXXXXXXX"></div>
+                  <div class="field"><label>Full name <span class="required">*</span></label><input type="text" class="colName" placeholder="Enter full name"></div>
+                  <div class="field"><label>Contact number <span class="required">*</span></label><input type="tel" class="colContact" placeholder="Enter contact number"></div>
                 </div>
-                <div class="field"><label>Address <span class="required">*</span></label><input type="text" class="colAddress" placeholder="Full address"></div>
-                <div class="field"><label>Relation to patient <span class="required">*</span></label><input type="text" class="colRelation" placeholder="e.g. Father, Mother, Spouse"></div>
+                <div class="field"><label>Address <span class="required">*</span></label><input type="text" class="colAddress" placeholder="Enter address"></div>
+                <div class="field"><label>Relation to patient <span class="required">*</span></label><input type="text" class="colRelation" placeholder="Enter relation to patient"></div>
                 <div class="field">
                   <label>Citizenship details (if available)</label>
-                  <input type="text" class="colCitizenship" placeholder="Citizenship number">
+                  <input type="text" class="colCitizenship" placeholder="Enter citizenship number">
                 </div>
                 <div class="field">
                   <label>Face photo <span class="required">*</span></label>
@@ -186,7 +186,7 @@
           <h3>Note to donors</h3>
           <p class="section-desc">A short message for people who donate to your case (optional).</p>
           <div class="field">
-            <textarea id="fNote" placeholder="Write a brief message to your donors..." style="min-height:120px;"></textarea>
+            <textarea id="fNote" placeholder="Enter message to donors" style="min-height:120px;"></textarea>
           </div>
         </div>
         <div id="submitStatus" class="hint" style="margin:16px 0;text-align:center;"></div>
