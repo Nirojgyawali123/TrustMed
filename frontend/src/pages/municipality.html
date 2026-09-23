@@ -22,6 +22,7 @@
     <a href="login.html" class="btn btn-outline btn-sm">Sign out</a>
   </div>
 </div>
+<script type="module" src="../js/topbar.js"></script>
 
 <div class="page">
   <div style="padding:20px 0 14px;">
@@ -50,8 +51,8 @@
           <input type="file" id="logoInput" accept=".jpg,.jpeg,.png" onchange="handleLogoUpload(event)">
         </div>
         <div style="display:flex;gap:10px;margin-top:16px;" id="actionButtons" hidden>
-          <button class="btn btn-green btn-block" id="approveBtn">Verify &amp; publish case</button>
-          <button class="btn btn-danger" id="rejectBtn">Reject</button>
+          <button type="button" class="btn btn-green btn-block" id="approveBtn">Verify &amp; publish case</button>
+          <button type="button" class="btn btn-danger" id="rejectBtn">Reject</button>
         </div>
       </div>
     </div>
@@ -60,7 +61,7 @@
 
 <div class="modal-overlay" id="rejectModal">
   <div class="modal" style="text-align:left;max-width:440px;">
-    <button class="close-x" onclick="closeRejectModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    <button type="button" class="close-x" onclick="closeRejectModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     <h3 style="font-size:17px;font-weight:700;margin-bottom:4px;">Reject case</h3>
     <p class="hint" style="margin-bottom:16px;">Optionally provide a reason. The patient can resubmit after fixing issues.</p>
     <div class="field">
@@ -68,8 +69,8 @@
       <textarea id="rejectReason" placeholder="Enter reason for rejection" style="min-height:80px;"></textarea>
     </div>
     <div style="display:flex;gap:10px;justify-content:flex-end;">
-      <button class="btn btn-outline" onclick="closeRejectModal()">Cancel</button>
-      <button class="btn btn-danger" onclick="confirmReject()">Reject case</button>
+      <button type="button" class="btn btn-outline" onclick="closeRejectModal()">Cancel</button>
+      <button type="button" class="btn btn-danger" onclick="confirmReject()">Reject case</button>
     </div>
   </div>
 </div>

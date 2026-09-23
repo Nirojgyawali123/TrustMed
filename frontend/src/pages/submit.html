@@ -22,6 +22,7 @@
     <a href="login.html" class="btn btn-outline btn-sm">Sign out</a>
   </div>
 </div>
+<script type="module" src="../js/topbar.js"></script>
 
 <div class="page">
   <div id="formView">
@@ -85,7 +86,7 @@
           <div class="field"><label>Estimated cost (NPR) <span class="required">*</span></label><input type="number" id="fCost" placeholder="Enter estimated cost"></div>
         </div>
         <div style="display:flex;justify-content:flex-end;margin-top:24px;">
-          <button class="btn btn-primary" onclick="goStep(2)">Next: Bank Details</button>
+          <button type="button" class="btn btn-primary" onclick="goStep(2)">Next: Bank Details</button>
         </div>
       </div>
 
@@ -113,8 +114,8 @@
           </div>
         </div>
         <div style="display:flex;justify-content:space-between;margin-top:24px;">
-          <button class="btn btn-outline" onclick="goStep(1)">Back</button>
-          <button class="btn btn-primary" onclick="goStep(3)">Next: Medical Reports</button>
+          <button type="button" class="btn btn-outline" onclick="goStep(1)">Back</button>
+          <button type="button" class="btn btn-primary" onclick="goStep(3)">Next: Medical Reports</button>
         </div>
       </div>
 
@@ -122,7 +123,7 @@
         <div class="form-section">
           <h3>Medical reports <span class="required">*</span></h3>
           <p class="section-desc">Upload at least one medical report (JPG or PNG). These will be reviewed by the hospital to verify your diagnosis.</p>
-          <div class="file-upload" id="reportUpload" onclick="document.getElementById('fileInput').click()">
+          <div class="file-upload" id="reportUpload" tabindex="0" role="button" aria-label="Upload medical reports" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('fileInput').click()}" onclick="document.getElementById('fileInput').click()">
             <div class="upload-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
             <div class="upload-text">Click to upload medical reports</div>
             <div class="upload-hint">JPG or PNG, at least 1 file required</div>
@@ -132,8 +133,8 @@
           <div id="fileError" class="hint" style="color:var(--danger);margin-top:8px;display:none;"></div>
         </div>
         <div style="display:flex;justify-content:space-between;margin-top:24px;">
-          <button class="btn btn-outline" onclick="goStep(2)">Back</button>
-          <button class="btn btn-primary" onclick="goStep(4)">Next: Collectors</button>
+          <button type="button" class="btn btn-outline" onclick="goStep(2)">Back</button>
+          <button type="button" class="btn btn-primary" onclick="goStep(4)">Next: Collectors</button>
         </div>
       </div>
 
@@ -172,12 +173,12 @@
                 </div>
               </div>
             </div>
-            <button class="btn btn-outline btn-sm" onclick="addCollector()" style="margin-top:12px;">+ Add Another Collector</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="addCollector()" style="margin-top:12px;">+ Add Another Collector</button>
           </div>
         </div>
         <div style="display:flex;justify-content:space-between;margin-top:24px;">
-          <button class="btn btn-outline" onclick="goStep(3)">Back</button>
-          <button class="btn btn-primary" onclick="goStep(5)">Next: Note to Donors</button>
+          <button type="button" class="btn btn-outline" onclick="goStep(3)">Back</button>
+          <button type="button" class="btn btn-primary" onclick="goStep(5)">Next: Note to Donors</button>
         </div>
       </div>
 
@@ -191,8 +192,8 @@
         </div>
         <div id="submitStatus" class="hint" style="margin:16px 0;text-align:center;"></div>
         <div style="display:flex;justify-content:space-between;margin-top:24px;">
-          <button class="btn btn-outline" onclick="goStep(4)">Back</button>
-          <button class="btn btn-primary" id="submitBtn" onclick="submitCase()" style="padding:14px 32px;font-size:15px;">Submit for verification</button>
+          <button type="button" class="btn btn-outline" onclick="goStep(4)">Back</button>
+          <button type="button" class="btn btn-primary" id="submitBtn" onclick="submitCase()" style="padding:14px 32px;font-size:15px;">Submit for verification</button>
         </div>
       </div>
     </div>
@@ -207,7 +208,7 @@
       <p class="hint" style="margin-bottom:4px;">Case ID <strong id="displayCaseId" style="font-size:18px;color:var(--primary);">#</strong></p>
       <p class="hint" style="margin-bottom:8px;">Status: <strong id="displayStatus" style="color:var(--warning);">Pending Hospital Verification</strong></p>
       <p class="hint" style="margin-bottom:20px;">You will be notified when the hospital and municipality review your case.</p>
-      <button class="btn btn-outline" onclick="window.location.href='submit.html'">Submit another case</button>
+      <button type="button" class="btn btn-outline" onclick="window.location.href='submit.html'">Submit another case</button>
     </div>
   </div>
 </div>

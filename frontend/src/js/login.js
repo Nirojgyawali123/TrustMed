@@ -1,10 +1,10 @@
 import { authAPI, setUser, getDeviceId, getDeviceInfo } from '/src/api.js';
 
 const ROUTES = {
-  admin: '../pages/god.html',
-  hospital: '../pages/hospital.html',
-  municipality: '../pages/municipality.html',
-  patient: '../pages/dashboard.html',
+  admin: 'god.html',
+  hospital: 'hospital.html',
+  municipality: 'municipality.html',
+  patient: 'dashboard.html',
 };
 
 document.getElementById('loginBtn').addEventListener('click', async () => {

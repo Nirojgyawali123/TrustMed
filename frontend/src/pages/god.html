@@ -22,6 +22,7 @@
     <a href="login.html" class="btn btn-outline btn-sm">Sign out</a>
   </div>
 </div>
+<script type="module" src="../js/topbar.js"></script>
 
 <div class="page">
   <div style="padding:20px 0 14px;">
@@ -59,14 +60,14 @@
         <div class="field"><label>Full name</label><input type="text" id="hospName" placeholder="Enter hospital name"></div>
         <div class="field"><label>Username</label><input type="text" id="hospUser" placeholder="Enter username"></div>
         <div class="field"><label>Password</label><input type="text" id="hospPass" placeholder="Enter password"></div>
-        <button class="btn btn-green btn-block" id="createHospBtn">Create hospital account</button>
+        <button type="button" class="btn btn-green btn-block" id="createHospBtn">Create hospital account</button>
       </div>
       <div class="card" style="padding:20px;margin-top:14px;">
         <div style="font-size:15px;font-weight:700;margin-bottom:14px;">Create municipality account</div>
         <div class="field"><label>Full name</label><input type="text" id="munName" placeholder="Enter municipality name"></div>
         <div class="field"><label>Username</label><input type="text" id="munUser" placeholder="Enter username"></div>
         <div class="field"><label>Password</label><input type="text" id="munPass" placeholder="Enter password"></div>
-        <button class="btn btn-green btn-block" id="createMunBtn">Create municipality account</button>
+        <button type="button" class="btn btn-green btn-block" id="createMunBtn">Create municipality account</button>
       </div>
       <div id="adminMsg" class="hint" style="margin-top:12px;text-align:center;"></div>
     </div>
@@ -82,7 +83,7 @@
 
 <div class="modal-overlay" id="caseModal">
   <div class="modal" style="text-align:left;max-width:560px;max-height:80vh;overflow-y:auto;">
-    <button class="close-x" onclick="document.getElementById('caseModal').classList.remove('open')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    <button type="button" class="close-x" onclick="document.getElementById('caseModal').classList.remove('open')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     <div id="caseModalContent"></div>
   </div>
 </div>
