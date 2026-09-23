@@ -1,9 +1,9 @@
 from cryptography.fernet import Fernet
 import base64, hashlib
-from backend.config import JWT_SECRET
+from backend.config import FILE_ENC_KEY
 
 def _get_key() -> bytes:
-    digest = hashlib.sha256(JWT_SECRET.encode()).digest()
+    digest = hashlib.sha256(FILE_ENC_KEY.encode()).digest()
     return base64.urlsafe_b64encode(digest)
 
 _cipher = Fernet(_get_key())
