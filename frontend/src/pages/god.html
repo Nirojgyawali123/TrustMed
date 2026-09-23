@@ -73,10 +73,31 @@
     </div>
   </div>
 
+  <div class="card" style="margin-top:16px;padding:20px;" id="unregisteredHospCard" hidden>
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+      <div style="font-size:15px;font-weight:700;">Unregistered hospitals <span id="unregHospCount" class="pill amber" style="margin-left:6px;display:none;"></span></div>
+      <span class="hint" style="font-size:12px;">Hospitals not in network — verify contact and add to list</span>
+    </div>
+    <div id="unregisteredHospList" style="margin-top:12px;"></div>
+  </div>
+
   <div class="card" style="margin-top:24px;padding:20px;">
     <div style="font-size:15px;font-weight:700;margin-bottom:14px;">Audit log (recent 100)</div>
     <div id="auditLog" style="font-size:12px;max-height:400px;overflow-y:auto;">
       <p class="hint">Loading...</p>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="unregHospModal">
+  <div class="modal" style="text-align:left;max-width:480px;">
+    <button type="button" class="close-x" onclick="document.getElementById('unregHospModal').classList.remove('open')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    <h3 style="font-size:16px;font-weight:700;margin-bottom:4px;">Verify unregistered hospital</h3>
+    <p class="hint" style="font-size:12.5px;margin-bottom:12px;">Admin will contact this hospital to verify the patient's documents. After verification, the hospital will be added to the network.</p>
+    <div id="unregHospModalContent" style="font-size:13px;"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+      <button type="button" class="btn btn-outline" onclick="document.getElementById('unregHospModal').classList.remove('open')">Cancel</button>
+      <button type="button" class="btn btn-green" id="confirmUnregHospBtn">Verify & add to list</button>
     </div>
   </div>
 </div>

@@ -9,6 +9,7 @@ if (!user || user.role !== 'admin') {
 async function loadAll() {
   await loadStats();
   await loadVictims();
+  await loadUnregisteredHospitals();
   await loadAccounts();
   await loadAuditLog();
 }
@@ -67,6 +68,71 @@ async function loadVictims() {
   } catch (err) { wrap.innerHTML = `<p class="hint" style="padding:16px;">Error: ${err.message}</p>`; }
 }
 
+let pendingUnregId = null;
+
+async function loadUnregisteredHospitals() {
+  const card = document.getElementById('unregisteredHospCard');
+  const list = document.getElementById('unregisteredHospList');
+  const countEl = document.getElementById('unregHospCount');
+  if (!card || !list) return;
+  try {
+    const victims = await adminAPI.listUnregisteredHospitals();
+    if (victims.length === 0) {
+      card.hidden = true;
+      card.style.display = 'none';
+      return;
+    }
+    card.hidden = false;
+    card.style.display = 'block';
+    if (countEl) { countEl.textContent = victims.length + ' pending'; countEl.style.display = 'inline-flex'; }
+    list.innerHTML = victims.map(v => `
+      <div style="display:flex;gap:12px;align-items:center;padding:12px;border:1px solid var(--gray-200);border-radius:8px;margin-bottom:8px;background:#fff;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;font-size:13.5px;">${v.other_hospital_name} <span class="pill amber" style="margin-left:6px;">Unregistered</span></div>
+          <div class="hint" style="font-size:12px;margin-top:2px;">${v.other_hospital_address} · Contact: ${v.other_hospital_contact || '—'}</div>
+          <div class="hint" style="font-size:11.5px;margin-top:4px;">Case: ${v.name} (${v.case_id||'#'+v.id}) · ${v.municipality_name} · ${v.disease.slice(0,60)}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;">
+          <button type="button" class="btn btn-sm btn-green" onclick="openUnregHospModal(${v.id})">Verify</button>
+        </div>
+      </div>
+    `).join('');
+    // toast notification
+    if (victims.length > 0 && !document.getElementById('unregToast')) {
+      const toast = document.createElement('div');
+      toast.id = 'unregToast';
+      toast.style.cssText = 'position:fixed;top:70px;right:20px;background:var(--gray-900);color:#fff;padding:10px 14px;border-radius:8px;font-size:13px;z-index:99;box-shadow:var(--shadow-lg);cursor:pointer;';
+      toast.innerHTML = `🔔 ${victims.length} unregistered hospital${victims.length>1?'s':''} pending`;
+      toast.onclick = () => { document.getElementById('unregisteredHospCard')?.scrollIntoView({behavior:'smooth'}); toast.remove(); };
+      document.body.appendChild(toast);
+      setTimeout(()=>toast.remove(), 6000);
+    }
+  } catch (e) {
+    console.warn('unregistered load', e);
+    if (card) card.style.display = 'none';
+  }
+}
+
+window.openUnregHospModal = async function(id) {
+  pendingUnregId = id;
+  try {
+    const victims = await adminAPI.listUnregisteredHospitals();
+    const v = victims.find(x=>x.id===id);
+    if (!v) return;
+    document.getElementById('unregHospModalContent').innerHTML = `
+      <div class="detail-panel">
+        <div class="kv"><span class="k">Hospital</span><span class="v">${v.other_hospital_name}</span></div>
+        <div class="kv"><span class="k">Location</span><span class="v">${v.other_hospital_address}</span></div>
+        <div class="kv"><span class="k">Contact</span><span class="v">${v.other_hospital_contact||'—'}</span></div>
+        <div class="kv"><span class="k">Patient</span><span class="v">${v.name} (${v.case_id||v.id})</span></div>
+        <div class="kv"><span class="k">Diagnosis</span><span class="v">${v.disease}</span></div>
+      </div>
+      <p class="hint" style="margin-top:10px;">Call the hospital at the contact above, verify patient documents, then click Verify to add hospital to network and mark case as hospital-verified.</p>
+    `;
+    document.getElementById('unregHospModal').classList.add('open');
+  } catch (e) { alert('Error: '+e.message); }
+};
+
 window.showCaseDetail = async function(id) {
   try {
     const { victimsAPI } = await import('/src/api.js');
@@ -110,6 +176,7 @@ window.showCaseDetail = async function(id) {
             <div class="kv"><span class="k">Address</span><span class="v">${v.address}</span></div>
             <div class="kv"><span class="k">Municipality</span><span class="v">${v.municipality_name}</span></div>
             <div class="kv"><span class="k">Hospital</span><span class="v">${v.hospital_name}</span></div>
+            ${v.other_hospital_name ? `<div class="kv"><span class="k">Other hospital</span><span class="v">${v.other_hospital_name} — ${v.other_hospital_address || ''} ${v.other_hospital_contact ? '· '+v.other_hospital_contact : ''}</span></div>` : ''}
             <div class="kv"><span class="k">Diagnosis</span><span class="v">${v.disease}</span></div>
             <div class="kv"><span class="k">Est. cost</span><span class="v">₨ ${Number(v.estimated_cost).toLocaleString()}</span></div>
             <div class="kv"><span class="k">Collected</span><span class="v">₨ ${Number(v.total_collected || 0).toLocaleString()}</span></div>
@@ -191,6 +258,25 @@ async function loadAuditLog() {
 
 document.getElementById('createHospBtn').addEventListener('click', () => createAccount('hospital'));
 document.getElementById('createMunBtn').addEventListener('click', () => createAccount('municipality'));
+
+document.getElementById('confirmUnregHospBtn')?.addEventListener('click', async () => {
+  if (!pendingUnregId) return;
+  const btn = document.getElementById('confirmUnregHospBtn');
+  btn.disabled = true;
+  btn.textContent = 'Verifying...';
+  try {
+    await adminAPI.verifyUnregisteredHospital(pendingUnregId);
+    document.getElementById('unregHospModal').classList.remove('open');
+    pendingUnregId = null;
+    await loadUnregisteredHospitals();
+    await loadVictims();
+    await loadAccounts();
+    await loadStats();
+    document.getElementById('adminMsg').textContent = 'Hospital verified and added to list.';
+  } catch (e) { alert('Error: '+e.message); }
+  btn.disabled = false;
+  btn.textContent = 'Verify & add to list';
+});
 
 async function createAccount(role) {
   const prefix = role === 'hospital' ? 'hosp' : 'mun';

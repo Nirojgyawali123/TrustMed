@@ -274,6 +274,53 @@ def admin_list_logs(db: Session = Depends(database.get_db), admin: models.Accoun
     return db.query(models.AuditLog).order_by(models.AuditLog.timestamp.desc()).limit(100).all()
 
 
+@backend.get("/hospitals")
+def list_hospitals(db: Session = Depends(database.get_db)):
+    hospitals = db.query(models.Account).filter(models.Account.role == "hospital").all()
+    return [{"full_name": h.full_name or h.username, "username": h.username} for h in hospitals]
+
+
+@backend.get("/admin/unregistered-hospitals", response_model=list[schemas.VictimResponse])
+def admin_unregistered_hospitals(db: Session = Depends(database.get_db), admin: models.Account = Depends(require_role("admin"))):
+    victims = db.query(models.Victim).filter(
+        models.Victim.other_hospital_name.isnot(None),
+        models.Victim.hospital_name == "Other",
+        models.Victim.rejected == False,
+    ).order_by(models.Victim.created_at.desc()).all()
+    return victims
+
+
+@backend.post("/admin/unregistered-hospitals/{victim_id}/verify")
+def admin_verify_unregistered_hospital(victim_id: int, db: Session = Depends(database.get_db), admin: models.Account = Depends(require_role("admin"))):
+    victim = crud.get_victim(db, victim_id)
+    if not victim or not victim.other_hospital_name:
+        raise HTTPException(status_code=404, detail="Unregistered hospital case not found")
+    # Create hospital account if not exists
+    existing = db.query(models.Account).filter(models.Account.full_name == victim.other_hospital_name).first()
+    if not existing:
+        # generate username from hospital name
+        base = "".join(c for c in victim.other_hospital_name.lower() if c.isalnum())[:12] or f"hosp{victim_id}"
+        username = base
+        suffix = 1
+        while db.query(models.Account).filter(models.Account.username == username).first():
+            username = f"{base}{suffix}"
+            suffix += 1
+        import bcrypt as _bcrypt
+        hashed = _bcrypt.hashpw(b"hospital123", _bcrypt.gensalt()).decode("utf-8")
+        acc = models.Account(username=username, password=hashed, role="hospital", full_name=victim.other_hospital_name, address=victim.other_hospital_address, phone=victim.other_hospital_contact)
+        db.add(acc)
+        db.commit()
+        db.refresh(acc)
+        crud.log_action(db, "hospital_created_from_unregistered", admin.username, "admin", victim_id, f"Created hospital {acc.full_name} ({username}) from unregistered request")
+    # mark victim as hospital verified and update hospital_name to actual name
+    victim.hospital_name = victim.other_hospital_name
+    victim.hospital_verified = True
+    db.commit()
+    db.refresh(victim)
+    crud.log_action(db, "unregistered_hospital_verified", admin.username, "admin", victim_id, f"Verified unregistered hospital {victim.other_hospital_name}")
+    return {"detail": "Hospital verified and added", "hospital": victim.other_hospital_name, "victim": victim}
+
+
 @backend.patch("/admin/victims/{victim_id}/pause")
 def admin_pause_victim(victim_id: int, db: Session = Depends(database.get_db), admin: models.Account = Depends(require_role("admin"))):
     victim = db.query(models.Victim).filter(models.Victim.id == victim_id).first()
@@ -322,6 +369,8 @@ def read_public_victims(db: Session = Depends(database.get_db)):
         # Use object attribute without triggering encryption write
         v.__dict__["bank_account_number"] = "****"
         v.__dict__["phone"] = "***"
+        if v.other_hospital_contact:
+            v.__dict__["other_hospital_contact"] = "****"
     return victims
 
 
@@ -346,6 +395,8 @@ def read_victim(victim_id: int, db: Session = Depends(database.get_db)):
     if victim.hospital_verified and victim.muni_verified and not victim.paused and not victim.rejected:
         victim.__dict__["bank_account_number"] = "****"
         victim.__dict__["phone"] = "***"
+        if victim.other_hospital_contact:
+            victim.__dict__["other_hospital_contact"] = "****"
     return victim
 
 
@@ -450,12 +501,12 @@ def verify_victim(
     victim_id: int,
     role: str,
     db: Session = Depends(database.get_db),
-    account: models.Account = Depends(require_role("hospital", "municipality")),
+    account: models.Account = Depends(require_role("hospital", "municipality", "admin")),
     _: bool = Depends(rate_limit(30)),
 ):
     if role not in ["hospital", "municipality"]:
         raise HTTPException(status_code=400, detail="Invalid role. Use 'hospital' or 'municipality'.")
-    if account.role != role:
+    if account.role != role and account.role != "admin":
         raise HTTPException(status_code=403, detail=f"Your account is {account.role}, cannot verify as {role}")
     updated_victim = crud.verify_case(db=db, victim_id=victim_id, role=role, actor=account.username)
     if not updated_victim:
@@ -468,7 +519,7 @@ def reject_victim(
     victim_id: int,
     reason: Optional[str] = None,
     db: Session = Depends(database.get_db),
-    account: models.Account = Depends(require_role("hospital", "municipality")),
+    account: models.Account = Depends(require_role("hospital", "municipality", "admin")),
 ):
     updated_victim = crud.reject_case(db=db, victim_id=victim_id, role=account.role, reason=reason, actor=account.username)
     if not updated_victim:

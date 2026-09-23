@@ -105,7 +105,8 @@ async function load() {
               <div class="kv"><span class="k">Address</span><span class="v">${v.address}</span></div>
               <div class="kv"><span class="k">Municipality</span><span class="v">${v.municipality_name}</span></div>
               <div class="kv"><span class="k">Diagnosis</span><span class="v">${v.disease}</span></div>
-              <div class="kv"><span class="k">Hospital</span><span class="v">${v.hospital_name}</span></div>
+              <div class="kv"><span class="k">Hospital</span><span class="v">${v.hospital_name === 'Other' && v.other_hospital_name ? v.other_hospital_name + (v.other_hospital_address ? ' — ' + v.other_hospital_address : '') : v.hospital_name}</span></div>
+              ${v.hospital_name === 'Other' && v.other_hospital_name ? `<div class="kv"><span class="k">Hospital contact</span><span class="v">Via admin verification</span></div><div class="kv"><span class="k">Unregistered location</span><span class="v">${v.other_hospital_address || '—'}</span></div>` : ''}
               <div class="kv"><span class="k">Est. cost</span><span class="v">₨ ${cost}</span></div>
             </div>
           </div>

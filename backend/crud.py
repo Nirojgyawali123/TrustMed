@@ -26,6 +26,9 @@ def create_victim(db: Session, victim_data: schemas.VictimCreate, account_id: in
         bank_account_holder=victim_data.bank_account_holder,
         bank_branch=victim_data.bank_branch,
         note_to_donors=victim_data.note_to_donors,
+        other_hospital_name=victim_data.other_hospital_name,
+        other_hospital_address=victim_data.other_hospital_address,
+        other_hospital_contact=victim_data.other_hospital_contact,
     )
     db.add(db_victim)
     db.commit()

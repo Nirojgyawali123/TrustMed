@@ -73,7 +73,7 @@
           <div class="field"><label>Municipality / Ward <span class="required">*</span></label><input type="text" id="fMunicipality" placeholder="Enter municipality / ward"></div>
           <div class="field">
             <label>Treating hospital <span class="required">*</span></label>
-            <select id="fHospital">
+            <select id="fHospital" onchange="toggleOtherHospital()">
               <option value="">Select hospital</option>
               <option>Bir Hospital, Kathmandu</option>
               <option>Patan Hospital</option>
@@ -81,6 +81,13 @@
               <option>Kanti Children's Hospital</option>
               <option>Other</option>
             </select>
+          </div>
+          <div id="otherHospitalFields" style="display:none;margin-top:12px;padding:14px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;">
+            <div style="font-size:13px;font-weight:600;margin-bottom:4px;">Unregistered hospital details <span class="pill amber" style="margin-left:6px;">Sent to admin</span></div>
+            <p class="hint" style="font-size:12px;margin-bottom:10px;">This hospital is not in our network. Admin will verify and add it.</p>
+            <div class="field"><label>Hospital name <span class="required">*</span></label><input type="text" id="fOtherHospName" placeholder="Enter hospital name"></div>
+            <div class="field"><label>Hospital address / location <span class="required">*</span></label><input type="text" id="fOtherHospAddress" placeholder="Enter hospital address"></div>
+            <div class="field"><label>Hospital contact <span class="required">*</span></label><input type="tel" id="fOtherHospContact" placeholder="Enter hospital contact"></div>
           </div>
           <div class="field"><label>Diagnosis <span class="required">*</span></label><textarea id="fDisease" placeholder="Enter diagnosis"></textarea></div>
           <div class="field"><label>Estimated cost (NPR) <span class="required">*</span></label><input type="number" id="fCost" placeholder="Enter estimated cost"></div>

@@ -57,6 +57,10 @@ class Victim(Base):
     bank_branch = Column(String, nullable=False)
     bank_qr = Column(String, nullable=True)
 
+    other_hospital_name = Column(String, nullable=True)
+    other_hospital_address = Column(String, nullable=True)
+    other_hospital_contact = Column(EncryptedString(255), nullable=True)
+
     hospital_verified = Column(Boolean, default=False)
     muni_verified = Column(Boolean, default=False)
     paused = Column(Boolean, default=False)

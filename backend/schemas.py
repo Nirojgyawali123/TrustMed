@@ -117,6 +117,9 @@ class VictimCreate(BaseModel):
     bank_branch: str
     note_to_donors: Optional[str] = None
     collectors: Optional[List[CollectorCreate]] = None
+    other_hospital_name: Optional[str] = None
+    other_hospital_address: Optional[str] = None
+    other_hospital_contact: Optional[str] = None
 
 
 class VictimResponse(BaseModel):
@@ -138,6 +141,9 @@ class VictimResponse(BaseModel):
     bank_account_holder: str
     bank_branch: str
     bank_qr: Optional[str] = None
+    other_hospital_name: Optional[str] = None
+    other_hospital_address: Optional[str] = None
+    other_hospital_contact: Optional[str] = None
     hospital_verified: bool
     muni_verified: bool
     paused: bool = False

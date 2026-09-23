@@ -1,4 +1,4 @@
-import { authAPI, victimsAPI, getUser } from '/src/api.js';
+import { authAPI, victimsAPI, adminAPI, getUser } from '/src/api.js';
 
 const user = getUser();
 if (!user || user.role !== 'patient') {
@@ -33,6 +33,46 @@ async function prefillAccount() {
 }
 prefillAccount();
 
+async function loadHospitals() {
+  const sel = document.getElementById('fHospital');
+  if (!sel) return;
+  try {
+    const hospitals = await adminAPI.listHospitals();
+    const current = sel.value;
+    // keep static first option, rebuild
+    sel.innerHTML = '<option value="">Select hospital</option>';
+    // sort by name
+    hospitals.sort((a,b)=> (a.full_name||'').localeCompare(b.full_name||''));
+    hospitals.forEach(h => {
+      const opt = document.createElement('option');
+      opt.value = h.full_name || h.username;
+      opt.textContent = h.full_name || h.username;
+      sel.appendChild(opt);
+    });
+    const other = document.createElement('option');
+    other.value = 'Other';
+    other.textContent = 'Other';
+    sel.appendChild(other);
+    if (current) sel.value = current;
+  } catch (e) {
+    console.warn('Could not load hospitals', e);
+  }
+}
+loadHospitals();
+
+window.toggleOtherHospital = function() {
+  const val = document.getElementById('fHospital').value;
+  const box = document.getElementById('otherHospitalFields');
+  if (!box) return;
+  if (val === 'Other') {
+    box.style.display = 'block';
+    box.setAttribute('aria-hidden','false');
+  } else {
+    box.style.display = 'none';
+    box.setAttribute('aria-hidden','true');
+  }
+};
+
 window.goStep = function(step) {
   if (step < currentStep || validateStep(currentStep)) {
     currentStep = step;
@@ -44,8 +84,14 @@ function validateStep(step) {
   if (step === 1) {
     if (!document.getElementById('fMunicipality').value.trim()) { showError('Please enter your municipality / ward.'); return false; }
     if (!document.getElementById('fHospital').value) { showError('Please select a treating hospital.'); return false; }
+    if (document.getElementById('fHospital').value === 'Other') {
+      if (!document.getElementById('fOtherHospName').value.trim()) { showError('Please enter the unregistered hospital name.'); return false; }
+      if (!document.getElementById('fOtherHospAddress').value.trim()) { showError('Please enter the unregistered hospital address.'); return false; }
+      if (!document.getElementById('fOtherHospContact').value.trim()) { showError('Please enter the unregistered hospital contact.'); return false; }
+    }
     if (!document.getElementById('fDisease').value.trim()) { showError('Please enter the diagnosis.'); return false; }
     if (!document.getElementById('fCost').value.trim()) { showError('Please enter the estimated cost.'); return false; }
+    if (!patientPhotoFile) { showError('Please upload the patient photo.'); return false; }
     return true;
   }
   if (step === 2) {
@@ -280,6 +326,7 @@ window.submitCase = async function() {
       }
     }
 
+    const isOtherHosp = document.getElementById('fHospital').value === 'Other';
     const body = {
       name: document.getElementById('fName').value.trim(),
       phone: document.getElementById('fPhone').value.trim(),
@@ -294,6 +341,9 @@ window.submitCase = async function() {
       bank_branch: document.getElementById('fBankBranch').value.trim(),
       note_to_donors: document.getElementById('fNote').value.trim() || undefined,
       collectors: collectors.length > 0 ? collectors : undefined,
+      other_hospital_name: isOtherHosp ? document.getElementById('fOtherHospName').value.trim() : undefined,
+      other_hospital_address: isOtherHosp ? document.getElementById('fOtherHospAddress').value.trim() : undefined,
+      other_hospital_contact: isOtherHosp ? document.getElementById('fOtherHospContact').value.trim() : undefined,
     };
 
     const result = await victimsAPI.create(body);
