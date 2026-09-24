@@ -135,10 +135,36 @@ window.openUnregHospModal = async function(id) {
 
 window.showCaseDetail = async function(id) {
   try {
-    const { victimsAPI } = await import('/src/api.js');
+    const { victimsAPI, getUser } = await import('/src/api.js');
     const v = await victimsAPI.get(id);
     const modal = document.getElementById('caseModalContent');
     const st = statusLabel(v);
+    // Fetch citizenship doc meta for admin (victim/municipality/admin visibility) — admin role can view
+    let citizenshipHtml = '';
+    try {
+      const meta = await victimsAPI.getCitizenshipMeta(id);
+      if (meta && meta.citizenship_doc) {
+        const isPdf = meta.citizenship_doc.toLowerCase().endsWith('.pdf');
+        if (isPdf) {
+          citizenshipHtml = `<div style="margin-top:12px;padding:10px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;">
+            <strong style="font-size:13px;">Government ID / Citizenship <span class="pill blue" style="font-size:10px;">restricted</span></strong>
+            <p class="hint" style="font-size:11px;margin:4px 0 6px;">Compressed to &lt;200 KB</p>
+            <a href="/uploads/${meta.citizenship_doc}" target="_blank" class="btn btn-outline btn-sm">View PDF</a>
+            <a href="${victimsAPI.getCitizenshipDocUrl(id)}" style="margin-left:8px;font-size:11px;color:var(--primary);" onclick="event.preventDefault(); fetch('${victimsAPI.getCitizenshipDocUrl(id)}',{headers:{Authorization:'Bearer '+ (getUser()?.token||'')}}).then(r=>r.blob()).then(b=>{const u=URL.createObjectURL(b); window.open(u,'_blank');}); return false;">Auth fetch</a>
+          </div>`;
+        } else {
+          citizenshipHtml = `<div style="margin-top:12px;padding:10px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;">
+            <strong style="font-size:13px;">Government ID / Citizenship <span class="pill blue" style="font-size:10px;">restricted</span></strong>
+            <p class="hint" style="font-size:11px;margin:4px 0 6px;">Compressed to &lt;200 KB · admin/municipality/owner only</p>
+            <img src="/uploads/${meta.citizenship_doc}" alt="Citizenship" style="max-width:100%;max-height:240px;object-fit:contain;display:block;margin:0 auto;background:#fff;border:1px solid var(--gray-200);border-radius:6px;">
+          </div>`;
+        }
+      } else {
+        citizenshipHtml = `<div style="margin-top:12px;padding:8px;background:var(--warning-light, #fef3c7);border-radius:6px;font-size:11px;">No government ID uploaded for this case.</div>`;
+      }
+    } catch (e) {
+      citizenshipHtml = `<div style="margin-top:12px;" class="hint" style="font-size:11px;">Gov ID not accessible: ${e.message}</div>`;
+    }
 
     const photoHtml = v.patient_photo
       ? `<img src="/uploads/${v.patient_photo}" style="width:64px;height:64px;border-radius:8px;object-fit:cover;">`
@@ -188,7 +214,8 @@ window.showCaseDetail = async function(id) {
           </div>
           ${v.note_to_donors ? `<div style="margin-top:10px;padding:8px;background:var(--primary-50);border-radius:6px;font-size:13px;"><strong>Note:</strong> ${v.note_to_donors}</div>` : ''}
           ${v.rejection_reason ? `<div style="margin-top:8px;padding:8px;background:var(--danger-light);border-radius:6px;font-size:13px;"><strong>Rejected:</strong> ${v.rejection_reason} (by ${v.rejected_by})</div>` : ''}
-          ${reportsHtml ? `<div style="margin-top:12px;"><strong style="font-size:13px;">Medical reports:</strong><div style="margin-top:4px;">${reportsHtml}</div></div>` : ''}
+          ${reportsHtml ? `<div style="margin-top:12px;"><strong style="font-size:13px;">Medical reports <span class="hint" style="font-weight:400;font-size:11px;">kept clear</span>:</strong><div style="margin-top:4px;">${reportsHtml}</div></div>` : ''}
+          ${citizenshipHtml}
           ${collectorsHtml ? `<div style="margin-top:12px;"><strong style="font-size:13px;">Collectors (${v.collectors.length}):</strong><div style="margin-top:4px;">${collectorsHtml}</div></div>` : ''}
         </div>
       </div>

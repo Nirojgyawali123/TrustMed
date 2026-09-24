@@ -50,10 +50,14 @@ export function getDeviceInfo() {
   } catch { return {}; }
 }
 
-function authHeaders() {
+export function authHeaders() {
   const u = getUser();
   if (!u || !u.token) return {};
   return { 'Authorization': `Bearer ${u.token}` };
+}
+export function getCitizenshipAuthFetchUrl(id) {
+  // Returns URL that requires Authorization header - caller must fetch with authHeaders()
+  return withBase(`/victims/${id}/citizenship-doc`);
 }
 
 async function api(path, opts = {}) {
@@ -124,6 +128,9 @@ export const victimsAPI = {
   uploadBankQr: (id, file) => apiUpload(`/victims/${id}/bank-qr`, file),
   uploadCollectorPhoto: (id, collectorId, file) => apiUpload(`/victims/${id}/collector/${collectorId}/photo`, file),
   uploadLogo: (id, file, role) => apiUpload(`/victims/${id}/upload-logo`, file, { role }),
+  uploadCitizenshipDoc: (id, file) => apiUpload(`/victims/${id}/citizenship-doc`, file),
+  getCitizenshipMeta: (id) => api(`/victims/${id}/citizenship-meta`),
+  getCitizenshipDocUrl: (id) => withBase(`/victims/${id}/citizenship-doc`),
 };
 
 export function logout() {

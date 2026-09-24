@@ -61,6 +61,9 @@ class Victim(Base):
     other_hospital_address = Column(String, nullable=True)
     other_hospital_contact = Column(EncryptedString(255), nullable=True)
 
+    # Per-case government doc (citizenship / gov ID) — stored as compressed <200 KB image
+    citizenship_doc = Column(String, nullable=True)
+
     hospital_verified = Column(Boolean, default=False)
     muni_verified = Column(Boolean, default=False)
     paused = Column(Boolean, default=False)

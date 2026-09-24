@@ -141,6 +141,7 @@ class VictimResponse(BaseModel):
     bank_account_holder: str
     bank_branch: str
     bank_qr: Optional[str] = None
+    citizenship_doc: Optional[str] = None
     other_hospital_name: Optional[str] = None
     other_hospital_address: Optional[str] = None
     other_hospital_contact: Optional[str] = None

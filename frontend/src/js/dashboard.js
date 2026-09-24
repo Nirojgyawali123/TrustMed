@@ -47,6 +47,9 @@ async function load() {
       const reportsHtml = (v.medical_reports && v.medical_reports.length > 0)
         ? v.medical_reports.map(r => `<a href="/uploads/${r.filename}" target="_blank" class="report-item" style="font-size:12px;">${r.original_name}</a>`).join('')
         : '<span class="hint" style="font-size:12px;">No reports</span>';
+      const citizenshipBadge = v.citizenship_doc
+        ? `<a href="/uploads/${v.citizenship_doc}" target="_blank" style="font-size:12px;color:var(--primary);">Gov ID ✓ (${(v.citizenship_doc.endsWith('.pdf')?'PDF':'IMG')}, &lt;200 KB)</a>`
+        : '<span class="hint" style="font-size:12px;color:var(--danger);">Gov ID missing</span>';
 
       const collectorsCount = v.collectors ? v.collectors.length : 0;
 
@@ -87,6 +90,10 @@ async function load() {
             <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;font-size:13px;">
               <div><span style="color:var(--gray-400);">Medical reports:</span></div>
               <div style="display:flex;gap:6px;flex-wrap:wrap;">${reportsHtml}</div>
+            </div>
+            <div style="display:flex;gap:12px;align-items:center;font-size:13px;margin-top:6px;">
+              <div><span style="color:var(--gray-400);">Government ID:</span></div>
+              <div>${citizenshipBadge}</div>
             </div>
             <div style="margin-top:10px;font-size:13px;">
               <span style="color:var(--gray-400);">Diagnosis:</span> ${v.disease}

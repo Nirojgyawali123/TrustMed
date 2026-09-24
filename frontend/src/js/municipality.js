@@ -97,6 +97,28 @@ function showDetail(row) {
     ? `<img src="/uploads/${v.hospital_logo}" style="height:32px;border-radius:4px;">`
     : '';
 
+  let citizenshipHtml = '';
+  if (v.citizenship_doc) {
+    const isPdf = v.citizenship_doc.toLowerCase().endsWith('.pdf');
+    if (isPdf) {
+      citizenshipHtml = `<div style="margin-top:16px;padding:14px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:6px;">Government ID / Citizenship <span class="pill blue" style="font-size:10px;">restricted</span></div>
+        <p class="hint" style="font-size:12px;margin-bottom:8px;">Compressed to &lt;200 KB · Visible only to you, municipality, and admin.</p>
+        <a href="/uploads/${v.citizenship_doc}" target="_blank" class="btn btn-outline btn-sm">View citizenship document (PDF)</a>
+      </div>`;
+    } else {
+      citizenshipHtml = `<div style="margin-top:16px;padding:14px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:6px;">Government ID / Citizenship <span class="pill blue" style="font-size:10px;">restricted</span></div>
+        <p class="hint" style="font-size:12px;margin-bottom:8px;">Compressed to &lt;200 KB · Only you, municipality, and admin can view.</p>
+        <div style="text-align:center;background:#fff;border:1px solid var(--gray-200);border-radius:8px;padding:8px;">
+          <img src="/uploads/${v.citizenship_doc}" alt="Citizenship document" style="max-width:100%;max-height:320px;object-fit:contain;display:block;margin:0 auto;">
+        </div>
+      </div>`;
+    }
+  } else {
+    citizenshipHtml = `<div style="margin-top:16px;padding:10px;background:var(--warning-light, #fef3c7);border-radius:8px;font-size:12px;color:var(--gray-600);">No government ID uploaded for this case.</div>`;
+  }
+
   const statusBadge = `<span class="pill green">Hospital verified ✓</span>`;
 
   detail.innerHTML = `
@@ -122,9 +144,10 @@ function showDetail(row) {
       </div>
       ${noteHtml}
       ${reportsHtml ? `<div style="margin-top:16px;">
-        <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Medical reports</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Medical reports <span class="hint" style="font-weight:400;font-size:11px;">kept clear, enhanced if blurry</span></div>
         <div class="report-list">${reportsHtml}</div>
       </div>` : '<p class="hint" style="margin-top:12px;">No medical reports uploaded.</p>'}
+      ${citizenshipHtml}
       ${collectorsHtml ? `<div style="margin-top:16px;">
         <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Collectors (${v.collectors.length})</div>
         ${collectorsHtml}

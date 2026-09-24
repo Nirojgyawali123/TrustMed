@@ -1,4 +1,4 @@
-import { victimsAPI } from '/src/api.js';
+import { victimsAPI, getUser, authHeaders } from '/src/api.js';
 
 async function load() {
   const params = new URLSearchParams(window.location.search);
@@ -9,6 +9,36 @@ async function load() {
 
   try {
     const v = await victimsAPI.get(parseInt(id));
+    // Try to fetch citizenship doc meta (auth-gated: victim/municipality/admin only)
+    let citizenshipHtml = '';
+    let citizenshipDocPath = null;
+    try {
+      const meta = await victimsAPI.getCitizenshipMeta(parseInt(id));
+      if (meta && meta.citizenship_doc) {
+        citizenshipDocPath = meta.citizenship_doc;
+        const isPdf = meta.citizenship_doc.toLowerCase().endsWith('.pdf');
+        if (isPdf) {
+          citizenshipHtml = `<div class="card" style="padding:18px;margin-top:12px;border-left:3px solid var(--primary);">
+            <h3 style="font-size:14px;font-weight:700;margin-bottom:6px;">Government ID / Citizenship <span class="pill blue" style="font-size:10px;">restricted</span></h3>
+            <p class="hint" style="font-size:12px;margin-bottom:10px;">Compressed to &lt;200 KB · Visible only to you, municipality, and admin.</p>
+            <a href="/uploads/${meta.citizenship_doc}" target="_blank" class="btn btn-outline btn-sm">View / Download citizenship document (PDF)</a>
+            <div style="margin-top:8px;"><a href="${victimsAPI.getCitizenshipDocUrl(parseInt(id))}" data-auth-link style="font-size:12px;color:var(--primary);">Authenticated download via API (requires sign-in)</a></div>
+          </div>`;
+        } else {
+          citizenshipHtml = `<div class="card" style="padding:18px;margin-top:12px;border-left:3px solid var(--primary);">
+            <h3 style="font-size:14px;font-weight:700;margin-bottom:6px;">Government ID / Citizenship <span class="pill blue" style="font-size:10px;">restricted</span></h3>
+            <p class="hint" style="font-size:12px;margin-bottom:10px;">Compressed to &lt;200 KB · Visible only to you, municipality, and admin. Original clarity preserved for verification (synthetic 800×600 if OCR available).</p>
+            <div style="text-align:center;background:#fff;border:1px solid var(--gray-200);border-radius:8px;padding:8px;">
+              <img id="citDocDisplay" src="/uploads/${meta.citizenship_doc}" alt="Citizenship document" style="max-width:100%;max-height:420px;object-fit:contain;display:block;margin:0 auto;background:#fff;">
+            </div>
+            <div class="hint" style="font-size:11px;margin-top:6px;text-align:center;">If image does not load, <a href="/uploads/${meta.citizenship_doc}" target="_blank">open directly</a> or <a href="#" id="citAuthFetch">fetch with auth</a></div>
+          </div>`;
+        }
+      }
+    } catch (e) {
+      // Not authorized or no doc — hide section (hospital/public will land here)
+      citizenshipHtml = '';
+    }
 
     const pct = v.total_collected && v.estimated_cost ? Math.min(100, (v.total_collected / v.estimated_cost) * 100) : 0;
     const raised = Number(v.total_collected || 0).toLocaleString();
@@ -111,9 +141,10 @@ async function load() {
             </div>
           </div>
           ${reportsHtml ? `<div class="card" style="padding:18px;margin-top:12px;">
-            <h3 style="font-size:14px;font-weight:700;margin-bottom:8px;">Medical reports</h3>
+            <h3 style="font-size:14px;font-weight:700;margin-bottom:8px;">Medical reports <span class="hint" style="font-weight:400;font-size:11px;">kept clear, enhanced if blurry</span></h3>
             <div class="report-list">${reportsHtml}</div>
           </div>` : ''}
+          ${citizenshipHtml}
         </div>
         <div>
           <div class="card" style="padding:18px;">
@@ -151,6 +182,40 @@ async function load() {
         <div class="trust-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-6l-2-2H5a2 2 0 0 0-2 2Z"/></svg>Funds go to verified bank account</div>
       </div>
     `;
+    // Attach authenticated fetch handler for citizenship doc (for strict auth endpoint)
+    setTimeout(() => {
+      const link = document.getElementById('citAuthFetch');
+      const img = document.getElementById('citDocDisplay');
+      if (link) {
+        link.addEventListener('click', async (e) => {
+          e.preventDefault();
+          const u = getUser();
+          if (!u || !u.token) { alert('Please sign in to fetch citizenship doc'); return; }
+          try {
+            const res = await fetch(victimsAPI.getCitizenshipDocUrl(parseInt(id)), { headers: { ...authHeaders() } });
+            if (!res.ok) throw new Error('Fetch failed: ' + res.status);
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            if (img) img.src = url;
+            else window.open(url, '_blank');
+          } catch (err) { alert('Auth fetch failed: ' + err.message); }
+        });
+      }
+      // Also try auth fetch automatically if direct /uploads fails (e.g., 404 due to protected static)
+      if (img && citizenshipDocPath) {
+        img.addEventListener('error', async () => {
+          const u = getUser();
+          if (!u || !u.token) return;
+          try {
+            const res = await fetch(victimsAPI.getCitizenshipDocUrl(parseInt(id)), { headers: { ...authHeaders() } });
+            if (res.ok) {
+              const blob = await res.blob();
+              img.src = URL.createObjectURL(blob);
+            }
+          } catch {}
+        });
+      }
+    }, 0);
   } catch (err) {
     el.innerHTML = `<div class="empty-state">Error: ${err.message}</div>`;
   }

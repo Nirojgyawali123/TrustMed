@@ -10,6 +10,7 @@ if (!user || user.role !== 'patient') {
 let currentStep = 1;
 let selectedFiles = [];
 let patientPhotoFile = null;
+let citizenshipDocFile = null;
 let bankQrFile = null;
 let collectorData = { files: {} };
 let collectorCount = 1;
@@ -177,6 +178,7 @@ function validateStep(step) {
     if (!document.getElementById('fDisease').value.trim()) { showError('Please enter the diagnosis.'); return false; }
     if (!document.getElementById('fCost').value.trim()) { showError('Please enter the estimated cost.'); return false; }
     if (!patientPhotoFile) { showError('Please upload the patient photo.'); return false; }
+    if (!citizenshipDocFile) { showError('Please upload the government ID / citizenship document.'); return false; }
     return true;
   }
   if (step === 2) {
@@ -286,6 +288,41 @@ window.handlePatientPhoto = function(e) {
     document.getElementById('patPhotoImg').src = ev.target.result;
   };
   reader.readAsDataURL(file);
+};
+
+window.handleCitizenshipDoc = function(e) {
+  const file = e.target.files[0];
+  const errEl = document.getElementById('citDocError');
+  const nameEl = document.getElementById('citDocName');
+  if (!file) return;
+  if (!/\.(jpg|jpeg|png|pdf)$/i.test(file.name)) {
+    errEl.textContent = 'Only JPG, PNG, or PDF accepted.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    errEl.textContent = 'File too large. Max 5 MB.';
+    errEl.style.display = 'block';
+    return;
+  }
+  errEl.style.display = 'none';
+  citizenshipDocFile = file;
+  nameEl.textContent = file.name + ' (' + (file.size / 1024).toFixed(0) + ' KB → will compress to <200 KB)';
+  if (file.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      const preview = document.getElementById('citDocPreview');
+      preview.style.display = 'block';
+      document.getElementById('citDocImg').src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  } else {
+    const preview = document.getElementById('citDocPreview');
+    preview.style.display = 'block';
+    document.getElementById('citDocImg').src = '';
+    document.getElementById('citDocImg').alt = 'PDF document';
+    nameEl.textContent += ' — PDF preview not available';
+  }
 };
 
 window.handleFileSelect = function(e) {
@@ -435,6 +472,11 @@ window.submitCase = async function() {
 
     if (patientPhotoFile) {
       await victimsAPI.uploadPatientPhoto(result.id, patientPhotoFile);
+    }
+
+    if (citizenshipDocFile) {
+      status.textContent = 'Compressing government ID to <200 KB...';
+      await victimsAPI.uploadCitizenshipDoc(result.id, citizenshipDocFile);
     }
 
     if (bankQrFile) {
