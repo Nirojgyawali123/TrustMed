@@ -33,35 +33,35 @@ export function renderTopbar() {
   else if (role === 'municipality') brandPill = '<span class="pill amber" style="margin-left:8px;">Municipality</span>';
   else if (role === 'admin') brandPill = '<span class="pill red" style="margin-left:8px;">Admin</span>';
 
-  const brandHtml = `<a href="index.html" class="brand" aria-label="TrustMed home" style="text-decoration:none;color:inherit;">
+  const brandHtml = `<a href="/" class="brand" aria-label="TrustMed home" style="text-decoration:none;color:inherit;">
     <span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2"><path d="M12 2 4 5v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V5l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg></span>
     <span>TrustMed${brandPill}</span>
   </a>`;
 
   let navHtml = '';
   if (page === 'login' || page === 'signup') {
-    navHtml = `${navLink('index.html','Home',page==='home')} ${navLink('cases.html','Browse Cases',page==='cases')}`;
+    navHtml = `${navLink('/','Home',page==='home')} ${navLink('/src/pages/cases.html','Browse Cases',page==='cases')}`;
   } else if (role === 'patient') {
-    navHtml = `${navLink('index.html','Home',page==='home')} ${navLink('cases.html','Browse Cases',page==='cases')} ${navLink('dashboard.html','My cases',page==='dashboard')}`;
+    navHtml = `${navLink('/','Home',page==='home')} ${navLink('/src/pages/cases.html','Browse Cases',page==='cases')} ${navLink('/src/pages/dashboard.html','My cases',page==='dashboard')}`;
   } else if (role === 'hospital') {
-    navHtml = `${navLink('index.html','Home',page==='home')} ${navLink('cases.html','Browse Cases',page==='cases')} ${navLink('hospital.html','Desk',page==='hospital')}`;
+    navHtml = `${navLink('/','Home',page==='home')} ${navLink('/src/pages/cases.html','Browse Cases',page==='cases')} ${navLink('/src/pages/hospital.html','Desk',page==='hospital')}`;
   } else if (role === 'municipality') {
-    navHtml = `${navLink('index.html','Home',page==='home')} ${navLink('cases.html','Browse Cases',page==='cases')} ${navLink('municipality.html','Desk',page==='municipality')}`;
+    navHtml = `${navLink('/','Home',page==='home')} ${navLink('/src/pages/cases.html','Browse Cases',page==='cases')} ${navLink('/src/pages/municipality.html','Desk',page==='municipality')}`;
   } else if (role === 'admin') {
-    navHtml = `${navLink('index.html','Home',page==='home')} ${navLink('cases.html','Browse Cases',page==='cases')} ${navLink('god.html','Console',page==='god')}`;
+    navHtml = `${navLink('/','Home',page==='home')} ${navLink('/src/pages/cases.html','Browse Cases',page==='cases')} ${navLink('/src/pages/god.html','Console',page==='god')}`;
   } else {
-    navHtml = `${navLink('index.html','Home',page==='home')} ${navLink('cases.html','Browse Cases',page==='cases')}`;
+    navHtml = `${navLink('/','Home',page==='home')} ${navLink('/src/pages/cases.html','Browse Cases',page==='cases')}`;
   }
 
   let rightHtml = '';
   if (!user) {
     // anon
-    if (page === 'login') rightHtml = `<a href="signup.html" class="btn btn-primary btn-sm">Start a Fundraiser</a>`;
-    else if (page === 'signup') rightHtml = `<a href="login.html" class="btn btn-outline btn-sm">Sign in</a>`;
-    else rightHtml = `<a href="login.html" class="btn btn-outline btn-sm">Sign in</a> <a href="signup.html" class="btn btn-primary btn-sm">Start a Fundraiser</a>`;
+    if (page === 'login') rightHtml = `<a href="/src/pages/signup.html" class="btn btn-primary btn-sm">Start a Fundraiser</a>`;
+    else if (page === 'signup') rightHtml = `<a href="/src/pages/login.html" class="btn btn-outline btn-sm">Sign in</a>`;
+    else rightHtml = `<a href="/src/pages/login.html" class="btn btn-outline btn-sm">Sign in</a> <a href="/src/pages/signup.html" class="btn btn-primary btn-sm">Start a Fundraiser</a>`;
   } else {
     if (role === 'patient') {
-      rightHtml = `<a href="submit.html" class="btn btn-primary btn-sm">Start a fundraiser</a> <a href="#" class="btn btn-outline btn-sm" data-logout>Sign out</a>`;
+      rightHtml = `<a href="/src/pages/submit.html" class="btn btn-primary btn-sm">Start a fundraiser</a> <a href="#" class="btn btn-outline btn-sm" data-logout>Sign out</a>`;
     } else if (role === 'hospital' || role === 'municipality' || role === 'admin') {
       rightHtml = `<span class="hint" style="font-size:12.5px;margin-right:4px;">${user.username}</span> <a href="#" class="btn btn-outline btn-sm" data-logout>Sign out</a>`;
     } else {
@@ -79,10 +79,10 @@ export function renderTopbar() {
   // hero CTA conditional — patient goes to submit, others to signup
   const heroPrimary = document.querySelector('.hero-actions a.btn-primary');
   if (heroPrimary) {
-    if (role === 'patient') heroPrimary.setAttribute('href', 'submit.html');
+    if (role === 'patient') heroPrimary.setAttribute('href', '/src/pages/submit.html');
     else if (role === 'hospital' || role === 'municipality' || role === 'admin') {
       heroPrimary.textContent = 'Go to Dashboard';
-      heroPrimary.setAttribute('href', role === 'hospital' ? 'hospital.html' : role === 'municipality' ? 'municipality.html' : 'god.html');
+      heroPrimary.setAttribute('href', role === 'hospital' ? '/src/pages/hospital.html' : role === 'municipality' ? '/src/pages/municipality.html' : '/src/pages/god.html');
     }
   }
 
@@ -96,7 +96,7 @@ export function renderTopbar() {
         if (typeof window.searchCase === 'function') window.searchCase();
         else {
           const q = searchInput.value.trim();
-          if (q) window.location.href = 'cases.html?search=' + encodeURIComponent(q);
+          if (q) window.location.href = '/src/pages/cases.html?search=' + encodeURIComponent(q);
         }
       }
     });
