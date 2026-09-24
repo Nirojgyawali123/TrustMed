@@ -72,9 +72,7 @@ document.getElementById('fpBtn1').addEventListener('click', async ()=>{
     const s2 = document.getElementById('fpStatus2');
     s2.style.color='var(--success)';
     s2.textContent = res.detail || 'OTP sent. Check Gmail (including spam).';
-    if(res.dev_otp){
-      s2.textContent += ` [Dev OTP: ${res.dev_otp}]`;
-    }
+    // Never display OTP in UI — it is sent via Gmail only (trustmed66@gmail.com)
     startCooldown(60);
   }catch(err){
     st.style.color='var(--danger)';
@@ -118,8 +116,7 @@ document.getElementById('fpResend').addEventListener('click', async ()=>{
   try{
     const res = await authAPI.forgotRequest({full_name, phone, citizenship, email, address});
     st.style.color='var(--success)';
-    st.textContent='OTP resent. Check Gmail.';
-    if(res.dev_otp) st.textContent += ` [Dev OTP: ${res.dev_otp}]`;
+    st.textContent = res.detail || 'OTP resent. Check Gmail (including spam).';
     startCooldown(60);
   }catch(err){
     st.style.color='var(--danger)'; st.textContent = err.message;

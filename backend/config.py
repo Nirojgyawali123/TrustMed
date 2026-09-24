@@ -27,9 +27,9 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", str(6
 # Email / OTP settings
 SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "465"))
-SMTP_USER = os.getenv("SMTP_USER", "")  # e.g. nirojgyawali45@gmail.com
+SMTP_USER = os.getenv("SMTP_USER", "")  # e.g. trustmed66@gmail.com
 SMTP_PASS = os.getenv("SMTP_PASS", "")  # Gmail App Password (16 chars, no spaces)
-SMTP_FROM = os.getenv("SMTP_FROM", SMTP_USER or "nirojgyawali45@gmail.com")
+SMTP_FROM = os.getenv("SMTP_FROM", SMTP_USER or "trustmed66@gmail.com")
 OTP_EXPIRE_MINUTES = int(os.getenv("OTP_EXPIRE_MINUTES", "3"))
 OTP_MAX_ATTEMPTS = int(os.getenv("OTP_MAX_ATTEMPTS", "2"))
 OTP_RESEND_COOLDOWN_SECONDS = int(os.getenv("OTP_RESEND_COOLDOWN_SECONDS", "60"))

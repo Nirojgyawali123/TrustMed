@@ -22,8 +22,8 @@ def _get_sender_email(db: Optional[Session] = None) -> str:
                     return v
         except Exception:
             pass
-    # Fallback to env
-    env_sender = (os.getenv("SMTP_FROM") or SMTP_FROM or SMTP_USER or "nirojgyawali45@gmail.com").strip()
+    # Fallback to env (trustmed66@gmail.com is the canonical sender)
+    env_sender = (os.getenv("SMTP_FROM") or SMTP_FROM or SMTP_USER or "trustmed66@gmail.com").strip()
     return env_sender
 
 
@@ -40,23 +40,32 @@ def _build_otp_html(code: str) -> str:
 """
 
 
-def send_otp_email(to_email: str, code: str, db: Optional[Session] = None, recipient_name: str = "") -> bool:
+def send_otp_email(to_email: str, code: str, db: Optional[Session] = None, recipient_name: str = "", sender_override: Optional[str] = None) -> bool:
     """Send OTP email via Gmail SMTP. Returns True on success, False on dev fallback.
-    If SMTP_USER/PASS empty, logs to console and returns False (dev mode)."""
+    If SMTP_USER/PASS empty, logs to console and returns False (dev mode).
+    sender_override is used for BackgroundTasks where the request DB session is already closed."""
     to_email = (to_email or "").strip()
     if not to_email or "@" not in to_email:
         print(f"[email] invalid recipient: {to_email}")
         return False
 
-    sender = _get_sender_email(db)
-    subject = f"TrustMed OTP — {code}"
+    # Prefer explicit sender (from request thread) to avoid using a closed DB session in background
+    if sender_override and "@" in sender_override:
+        sender = sender_override.strip()
+    else:
+        sender = _get_sender_email(db)
+    # Never leak OTP in Subject (appears in push notifications / logs)
+    subject = "TrustMed — Your verification code"
 
     # Dev fallback: if no credentials, log and pretend success for flow
     smtp_user = (os.getenv("SMTP_USER") or SMTP_USER or "").strip()
     smtp_pass = (os.getenv("SMTP_PASS") or SMTP_PASS or "").strip()
     if not smtp_user or not smtp_pass:
-        # No SMTP configured — log OTP for dev testing
-        print(f"\n{'='*60}\n[DEV MODE] OTP for {to_email} (from {sender}): {code}\n{'='*60}\nHTML preview available in logs.\n")
+        env = os.getenv("ENV", "development")
+        if env != "production":
+            print(f"\n{'='*60}\n[DEV MODE] OTP for {to_email} (from {sender}): {code}\n{'='*60}\nHTML preview available in logs.\n")
+        else:
+            print(f"[email] SMTP not configured (ENV=production) — not logging OTP, email not sent to {to_email}")
         return False
 
     msg = MIMEMultipart("alternative")
@@ -84,9 +93,13 @@ def send_otp_email(to_email: str, code: str, db: Optional[Session] = None, recip
         print(f"[email] OTP sent to {to_email} from {sender}")
         return True
     except Exception as e:
-        print(f"[email] failed to send to {to_email}: {e}")
-        # Fallback log so dev flow not blocked
-        print(f"[email fallback] OTP for {to_email}: {code}")
+        print(f"[email] failed to send to {to_email} via {sender} ({host}:{port} as {smtp_user}): {e}")
+        env = os.getenv("ENV", "development")
+        # Only log raw OTP in non-production to avoid leaking in prod logs
+        if env != "production":
+            print(f"[email fallback] OTP for {to_email}: {code}")
+        else:
+            print(f"[email fallback] OTP not logged (production)")
         return False
 
 

@@ -88,8 +88,13 @@ def _ensure_indexes_and_seed_settings():
         try:
             existing = db.query(AppSettings).filter(AppSettings.key == "smtp_from_email").first()
             if not existing:
-                s = AppSettings(key="smtp_from_email", value="nirojgyawali45@gmail.com", updated_by="system")
+                s = AppSettings(key="smtp_from_email", value="trustmed66@gmail.com", updated_by="system")
                 db.add(s)
+                db.commit()
+            elif existing.value and "nirojgyawali45@gmail.com" in existing.value:
+                # Migrate old default to new canonical sender
+                existing.value = "trustmed66@gmail.com"
+                existing.updated_by = "system-migrate-trustmed66"
                 db.commit()
         finally:
             db.close()

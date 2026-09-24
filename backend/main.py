@@ -615,24 +615,15 @@ def forgot_request(req: schemas.ForgotRequest, background_tasks: BackgroundTasks
     db.add(entry)
     db.commit()
 
-    # Send email via background task
-    background_tasks.add_task(send_otp_email, email_in, otp, db)
-    # Also direct fallback log if no SMTP (send_otp_email will log)
-    # For dev immediacy, call inline as well if BackgroundTasks timing issues? Background handles.
+    # Resolve sender before enqueueing BackgroundTask (request Session closes after response)
+    sender = _get_sender_email(db)
+    # Pass sender_override instead of db to avoid using a closed Session in background
+    background_tasks.add_task(send_otp_email, email_in, otp, None, "", sender)
 
     crud.log_action(db, "password_reset_requested", acct.username, acct.role, details=f"OTP sent to {email_in}")
 
-    # In dev mode where SMTP not configured, include hint (remove in prod)
-    dev_hint = None
-    import os as _os
-    if not (_os.getenv("SMTP_USER") or "") or not (_os.getenv("SMTP_PASS") or ""):
-        dev_hint = f"Dev mode: OTP is {otp} (check server console)"
-
-    resp = {"detail": "If details matched, an OTP was sent to your Gmail.", "expires_in_minutes": OTP_EXPIRE_MINUTES}
-    if dev_hint:
-        resp["dev_otp"] = otp
-        resp["dev_hint"] = dev_hint
-    return resp
+    # Never expose raw OTP to client — send_otp_email logs to server console only when ENV != production
+    return {"detail": "If details matched, an OTP was sent to your Gmail.", "expires_in_minutes": OTP_EXPIRE_MINUTES}
 
 
 @backend.post("/auth/forgot/verify")

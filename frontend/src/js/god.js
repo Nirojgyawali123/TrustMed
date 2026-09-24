@@ -301,7 +301,7 @@ async function loadEmailSettings(){
       const all = await adminAPI.listSettings();
       const found = all.find(x=>x.key==='smtp_from_email');
       if(found) inp.value = found.value||'';
-      else inp.placeholder='nirojgyawali45@gmail.com';
+      else inp.placeholder='trustmed66@gmail.com';
     }catch(_){}
   }
   document.getElementById('saveSmtpBtn')?.addEventListener('click', async ()=>{
