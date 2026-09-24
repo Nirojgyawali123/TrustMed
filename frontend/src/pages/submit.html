@@ -29,7 +29,6 @@
     <div style="max-width:720px;margin:0 auto;">
       <div style="padding:24px 0 16px;text-align:center;">
         <h1 class="page-title" style="text-align:center;">Start a medical fundraiser</h1>
-        <p class="page-sub" style="margin:6px auto 0;text-align:center;">Your case will be verified by the hospital and municipality before going public.</p>
       </div>
 
       <div class="step-indicator" id="stepIndicator">
@@ -49,7 +48,6 @@
       <div id="step1" class="step-content">
         <div class="form-section">
           <h3>Patient information</h3>
-          <p class="section-desc">Pre-filled from your account. You can update your details in your profile.</p>
           <div class="field-row2">
             <div class="field"><label>Full name</label><input type="text" id="fName" disabled></div>
             <div class="field"><label>Date of birth</label><input type="text" id="fDob" disabled></div>
@@ -72,7 +70,6 @@
           </div>
           <div class="field" style="margin-top:14px;">
             <label>Government ID / Citizenship document <span class="required">*</span></label>
-            <p class="hint" style="margin-bottom:8px;font-size:12.5px;">Upload any government ID (citizenship, passport etc). JPG/PNG up to 5 MB → auto-compressed to &lt;200 KB (OCR synthetic 800×600 + face crop when available, low quality ok). PDF must be &lt;200 KB — for larger PDFs please upload as JPG/PNG. Only you, municipality, and admin can view it.</p>
             <input type="file" id="fCitizenshipDoc" accept=".jpg,.jpeg,.png,.pdf" onchange="handleCitizenshipDoc(event)">
             <div style="margin-top:8px;display:flex;align-items:center;gap:14px;">
               <div id="citDocPreview" style="width:96px;height:96px;border-radius:8px;background:var(--gray-100);display:none;overflow:hidden;border:1px solid var(--gray-200);">
@@ -88,7 +85,7 @@
             <input type="text" id="fHospital" list="hospitalDatalist" placeholder="Search or select hospital — Butwal" autocomplete="off" oninput="handleHospitalInput()" onchange="toggleOtherHospital()">
             <datalist id="hospitalDatalist"></datalist>
             <div id="hospitalDropdown" role="listbox" style="display:none;max-height:180px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:8px;background:#fff;box-shadow:var(--shadow-md);margin-top:4px;"></div>
-            <div class="hint" style="font-size:11.5px;margin-top:4px;">Type to search Butwal hospitals or select from list. Choose “Other” if not found.</div>
+
           </div>
           <div id="otherHospitalFields" style="display:none;margin-top:12px;padding:14px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;">
             <div class="field"><label>Hospital name <span class="required">*</span></label><input type="text" id="fOtherHospName" placeholder="Enter the name of the hospital"></div>
@@ -106,7 +103,6 @@
       <div id="step2" class="step-content" style="display:none;">
         <div class="form-section">
           <h3>Bank details</h3>
-          <p class="section-desc">Where should the collected funds be transferred? Upload the QR code directly from your bank app.</p>
           <div class="field"><label>Bank name <span class="required">*</span></label><input type="text" id="fBankName" placeholder="Enter bank name"></div>
           <div class="field"><label>Account holder name <span class="required">*</span></label><input type="text" id="fBankHolder" placeholder="Enter account holder name"></div>
           <div class="field-row2">
@@ -115,7 +111,6 @@
           </div>
           <div class="field" style="margin-top:14px;">
             <label>Bank QR code <span class="required">*</span></label>
-            <p class="hint" style="margin-bottom:8px;font-size:12.5px;">Upload the QR code image from your bank (JPG/PNG). This QR will be shown publicly to donors — your account number itself will stay hidden.</p>
             <input type="file" id="fBankQr" accept=".jpg,.jpeg,.png" onchange="handleBankQr(event)">
             <div style="margin-top:8px;display:flex;align-items:center;gap:14px;">
               <div id="bankQrPreview" style="width:96px;height:96px;border-radius:8px;background:var(--gray-100);display:none;overflow:hidden;border:1px solid var(--gray-200);">
@@ -135,7 +130,6 @@
       <div id="step3" class="step-content" style="display:none;">
         <div class="form-section">
           <h3>Medical reports <span class="required">*</span></h3>
-          <p class="section-desc">Upload at least one medical report (JPG or PNG). These will be reviewed by the hospital to verify your diagnosis.</p>
           <div class="file-upload" id="reportUpload" tabindex="0" role="button" aria-label="Upload medical reports" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('fileInput').click()}" onclick="document.getElementById('fileInput').click()">
             <div class="upload-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
             <div class="upload-text">Click to upload medical reports</div>
@@ -198,7 +192,6 @@
       <div id="step5" class="step-content" style="display:none;">
         <div class="form-section">
           <h3>Note to donors</h3>
-          <p class="section-desc">A short message for people who donate to your case (optional).</p>
           <div class="field">
             <textarea id="fNote" placeholder="Enter message to donors" style="min-height:120px;"></textarea>
           </div>

@@ -28,7 +28,6 @@
   <div style="padding:20px 0 14px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
     <div>
       <h1 class="page-title">Verify medical cases</h1>
-      <p class="page-sub">Review patient reports and confirm the diagnosis. Verified cases move to the municipality for identity clearance.</p>
     </div>
     <button type="button" class="btn btn-outline btn-sm" id="reqPwdBtn" style="margin-top:6px;">Request password change</button>
   </div>
@@ -51,7 +50,6 @@
         <div id="detailContent"><p class="hint">Select a case from the queue.</p></div>
         <div id="logoSection" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--gray-100);">
           <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Upload your hospital logo</div>
-          <p class="hint" style="font-size:12px;margin-bottom:10px;">After verification, your logo will appear on the case as a trust badge.</p>
           <input type="file" id="logoInput" accept=".jpg,.jpeg,.png" onchange="handleLogoUpload(event)">
         </div>
         <div style="display:flex;gap:10px;margin-top:16px;" id="actionButtons" hidden>
@@ -67,7 +65,6 @@
   <div class="modal" style="text-align:left;max-width:440px;">
     <button type="button" class="close-x" onclick="closeRejectModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     <h3 style="font-size:17px;font-weight:700;margin-bottom:4px;">Reject case</h3>
-    <p class="hint" style="margin-bottom:16px;">Optionally provide a reason. The patient will see this on their dashboard and can resubmit after fixing issues.</p>
     <div class="field">
       <label>Reason for rejection (optional)</label>
       <textarea id="rejectReason" placeholder="Enter reason for rejection" style="min-height:80px;"></textarea>

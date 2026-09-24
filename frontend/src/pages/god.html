@@ -43,14 +43,13 @@
       <a href="#pwd" data-section="pwd"><span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1"/></svg></span><span class="nav-label">Password requests</span><span class="pill amber" id="drawerPwdCount" style="margin-left:auto;font-size:10px;display:none;"></span></a>
       <a href="#audit" data-section="audit"><span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span><span class="nav-label">Audit log</span></a>
     </nav>
-    <div class="drawer-foot hint" style="font-size:11px;padding:12px 14px;border-top:1px solid var(--gray-100);">TrustMed Admin · 8h session</div>
   </aside>
   <div id="drawerOverlay" class="admin-drawer-overlay" aria-hidden="true"></div>
 
   <main id="adminMain" class="admin-main page" style="padding-top:16px;">
     <div class="card" style="padding:10px 12px;margin-bottom:14px;display:flex;gap:8px;align-items:center;">
       <div style="flex:1;position:relative;">
-        <input type="text" id="adminGlobalSearch" placeholder="Search everywhere: cases, accounts, hospitals..." aria-label="Global admin search" style="width:100%;padding:10px 12px 10px 36px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:14px;outline:none;">
+        <input type="text" id="adminGlobalSearch" placeholder="Search" aria-label="Search" style="width:100%;padding:10px 12px 10px 36px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:14px;outline:none;">
         <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:16px;height:16px;stroke:var(--gray-400);pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
       </div>
       <button id="adminGlobalClear" class="btn btn-ghost btn-sm" style="display:none;">Clear</button>
@@ -59,7 +58,6 @@
     <section data-section="overview" id="sec-overview">
       <div style="padding:4px 0 14px;">
         <h1 class="page-title">Admin console</h1>
-        <p class="page-sub">Manage accounts, view all cases, and monitor platform activity. Use the left drawer to jump to each sector — every role stays isolated.</p>
       </div>
       <div style="display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));margin-bottom:16px;">
         <div class="stat-card"><div class="num" id="statTotal">-</div><div class="label">Total cases</div></div>
@@ -70,13 +68,12 @@
         <div class="stat-card green"><div class="num" id="statVerified">-</div><div class="label">Verified &amp; live</div></div>
         <div class="stat-card"><div class="num" id="statAccounts">-</div><div class="label">Accounts</div></div>
       </div>
-      <div class="card" style="padding:16px;"><p class="hint" style="font-size:13px;">Select a section from the left drawer. Stats above update live. Patient, Hospital, Municipality, and Donor pages remain separate — this drawer is admin-only.</p></div>
     </section>
 
     <!-- All cases -->
     <section data-section="cases" id="sec-cases" hidden>
       <div class="section-head" style="margin-top:4px;"><h2>All cases</h2><span class="count" id="casesCount"></span></div>
-      <div class="search-row" style="max-width:480px;margin-bottom:12px;"><input type="text" id="searchCases" placeholder="Search cases by name, ID, hospital, municipality, disease..." aria-label="Search cases" style="flex:1;"><span id="casesFilteredCount" class="hint" style="font-size:12px;display:none;"></span></div>
+      <div class="search-row" style="max-width:480px;margin-bottom:12px;"><input type="text" id="searchCases" placeholder="Search" aria-label="Search" style="flex:1;"><span id="casesFilteredCount" class="hint" style="font-size:12px;display:none;"></span></div>
       <div class="card" style="padding:0;overflow:auto;">
         <div id="victimsTableWrap" style="padding:0 4px 4px;"><p class="hint" style="padding:16px;">Loading...</p></div>
       </div>
@@ -85,7 +82,7 @@
     <!-- Accounts -->
     <section data-section="accounts" id="sec-accounts" hidden>
       <div class="section-head"><h2>All accounts</h2></div>
-      <div class="search-row" style="max-width:420px;margin-bottom:12px;"><input type="text" id="searchAccounts" placeholder="Search by username, name, role..." aria-label="Search accounts"></div>
+      <div class="search-row" style="max-width:420px;margin-bottom:12px;"><input type="text" id="searchAccounts" placeholder="Search" aria-label="Search"></div>
       <div class="card" style="padding:20px;">
         <div id="accountsList"><p class="hint">Loading...</p></div>
       </div>
@@ -115,11 +112,10 @@
 
     <!-- Unregistered -->
     <section data-section="unregistered" id="sec-unregistered" hidden>
-      <div class="search-row" style="max-width:420px;margin-bottom:12px;"><input type="text" id="searchUnregistered" placeholder="Search hospitals by name, address, case..." aria-label="Search unregistered"></div>
+      <div class="search-row" style="max-width:420px;margin-bottom:12px;"><input type="text" id="searchUnregistered" placeholder="Search" aria-label="Search"></div>
       <div class="card" style="padding:20px;" id="unregisteredHospCard">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
           <div style="font-size:15px;font-weight:700;">Unregistered hospitals <span id="unregHospCount" class="pill amber" style="margin-left:6px;display:none;"></span></div>
-          <span class="hint" style="font-size:12px;">Hospitals not in network — verify contact and add to list</span>
         </div>
         <div id="unregisteredHospList" style="margin-top:12px;"><p class="hint">Loading...</p></div>
       </div>
@@ -129,7 +125,6 @@
     <section data-section="email" id="sec-email" hidden>
       <div class="card" style="padding:20px;max-width:520px;" id="emailSettingsCard">
         <div style="font-size:15px;font-weight:700;margin-bottom:4px;">Email sender settings</div>
-        <p class="hint" style="font-size:12.5px;margin-bottom:12px;">Choose the Gmail used to send OTP. Requires Gmail App Password in server ENV. Current sender shown below.</p>
         <div class="field"><label>Sending Gmail</label><input type="email" id="smtpFromInput" placeholder="trustmed66@gmail.com"></div>
         <button type="button" class="btn btn-primary btn-block" id="saveSmtpBtn">Save sender Gmail</button>
         <div id="smtpMsg" class="hint" style="margin-top:8px;text-align:center;"></div>
@@ -138,20 +133,19 @@
 
     <!-- Password requests -->
     <section data-section="pwd" id="sec-pwd" hidden>
-      <div class="search-row" style="max-width:420px;margin-bottom:12px;"><input type="text" id="searchPwd" placeholder="Search by username, role, reason..." aria-label="Search password requests"></div>
+      <div class="search-row" style="max-width:420px;margin-bottom:12px;"><input type="text" id="searchPwd" placeholder="Search" aria-label="Search"></div>
       <div class="card" style="padding:20px;" id="pwdRequestsCard">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
           <div style="font-size:15px;font-weight:700;">Hospital / Municipality password requests</div>
           <span class="pill amber" id="pwdReqCount" style="display:none;"></span>
         </div>
-        <p class="hint" style="font-size:12px;margin-bottom:8px;">Patients use OTP; staff must request admin approval. Approve then set new password.</p>
         <div id="pwdRequestsList" style="max-height:500px;overflow:auto;"><p class="hint">Loading...</p></div>
       </div>
     </section>
 
     <!-- Audit -->
     <section data-section="audit" id="sec-audit" hidden>
-      <div class="search-row" style="max-width:480px;margin-bottom:12px;"><input type="text" id="searchAudit" placeholder="Search audit by actor, action, details..." aria-label="Search audit log"></div>
+      <div class="search-row" style="max-width:480px;margin-bottom:12px;"><input type="text" id="searchAudit" placeholder="Search" aria-label="Search"></div>
       <div class="card" style="padding:20px;">
         <div style="font-size:15px;font-weight:700;margin-bottom:14px;">Audit log (recent 100)</div>
         <div id="auditLog" style="font-size:12px;max-height:500px;overflow-y:auto;"><p class="hint">Loading...</p></div>
@@ -164,7 +158,6 @@
   <div class="modal" style="text-align:left;max-width:480px;">
     <button type="button" class="close-x" onclick="document.getElementById('unregHospModal').classList.remove('open')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     <h3 style="font-size:16px;font-weight:700;margin-bottom:4px;">Verify unregistered hospital</h3>
-    <p class="hint" style="font-size:12.5px;margin-bottom:12px;">Admin will contact this hospital to verify the patient's documents. After verification, the hospital will be added to the network.</p>
     <div id="unregHospModalContent" style="font-size:13px;"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
       <button type="button" class="btn btn-outline" onclick="document.getElementById('unregHospModal').classList.remove('open')">Cancel</button>
