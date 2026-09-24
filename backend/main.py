@@ -101,7 +101,11 @@ _rate_store = defaultdict(list)
 def rate_limit(max_per_minute: int = 20):
     def limiter(request: Request):
         client = request.client.host if request.client else "unknown"
-        key = f"{client}:{request.url.path}"
+        # Include user identifier if present (Authorization header) for per-user isolation
+        auth = request.headers.get("authorization") or ""
+        # Use first 20 chars of token as user fingerprint to avoid host-only bypass
+        user_fp = auth[-20:] if auth else "anon"
+        key = f"{client}:{user_fp}:{request.url.path}"
         now = time.time()
         window = now - 60
         _rate_store[key] = [t for t in _rate_store[key] if t > window]
@@ -399,6 +403,29 @@ def _can_view_citizenship(victim: models.Victim, account: models.Account) -> boo
     return False
 
 
+def _is_owner_patient(victim: models.Victim, account: models.Account) -> bool:
+    return account.role == "patient" and victim.account_id is not None and victim.account_id == account.id
+
+
+def _can_access_victim(victim: models.Victim, account: models.Account) -> bool:
+    """Strict isolation: who may view/modify this victim's private data."""
+    if account.role == "admin":
+        return True
+    if _is_owner_patient(victim, account):
+        return True
+    if account.role == "hospital":
+        # Hospital may only access cases assigned to them (by full_name) — handles Other flow
+        hn = (victim.hospital_name or "").strip().lower()
+        oh = (victim.other_hospital_name or "").strip().lower()
+        cur = (account.full_name or "").strip().lower()
+        return cur and (hn == cur or oh == cur or hn == "other")
+    if account.role == "municipality":
+        mn = (victim.municipality_name or "").strip().lower()
+        cur = (account.full_name or "").strip().lower()
+        return cur and mn == cur
+    return False
+
+
 models.Base.metadata.create_all(bind=database.engine)
 database.migrate_schema()
 database._ensure_indexes_and_seed_settings()
@@ -422,7 +449,13 @@ os.makedirs(os.path.join(UPLOAD_DIR, "logos"), exist_ok=True)
 os.makedirs(os.path.join(UPLOAD_DIR, "qrcodes"), exist_ok=True)
 os.makedirs(os.path.join(UPLOAD_DIR, "citizenship"), exist_ok=True)
 
-backend.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+# Serve public uploads directly; citizenship is NOT mounted — must go via auth-gated /victims/{id}/citizenship-doc
+backend.mount("/uploads/reports", StaticFiles(directory=os.path.join(UPLOAD_DIR, "reports")), name="reports")
+backend.mount("/uploads/collectors", StaticFiles(directory=os.path.join(UPLOAD_DIR, "collectors")), name="collectors")
+backend.mount("/uploads/photos", StaticFiles(directory=os.path.join(UPLOAD_DIR, "photos")), name="photos")
+backend.mount("/uploads/logos", StaticFiles(directory=os.path.join(UPLOAD_DIR, "logos")), name="logos")
+backend.mount("/uploads/qrcodes", StaticFiles(directory=os.path.join(UPLOAD_DIR, "qrcodes")), name="qrcodes")
+# Note: /uploads/citizenship is intentionally not mounted — use get_citizenship_doc with _can_view_citizenship
 
 @backend.get("/")
 def health():
@@ -474,6 +507,31 @@ def get_current_user(
         return account
 
     raise HTTPException(status_code=401, detail="Authentication required. Provide Bearer token or X-Auth-User / X-Auth-Pass headers.")
+
+
+def get_optional_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    x_auth_user: Optional[str] = Header(None),
+    x_auth_pass: Optional[str] = Header(None),
+    db: Session = Depends(database.get_db),
+) -> Optional[models.Account]:
+    """Like get_current_user but returns None instead of 401 when unauthenticated — for public endpoints that hide private data."""
+    if credentials:
+        token = credentials.credentials
+        try:
+            payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+            sub_val = payload.get("sub")
+            if sub_val is None:
+                return None
+            account = db.query(models.Account).filter(models.Account.id == int(sub_val)).first()
+            return account
+        except Exception:
+            return None
+    if x_auth_user and x_auth_pass:
+        account = db.query(models.Account).filter(models.Account.username == x_auth_user).first()
+        if account and account.password == x_auth_pass:
+            return account
+    return None
 
 
 def require_role(*roles: str):
@@ -1107,20 +1165,32 @@ def read_all_victims(db: Session = Depends(database.get_db), account: models.Acc
 
 
 @backend.get("/victims/{victim_id}", response_model=schemas.VictimResponse)
-def read_victim(victim_id: int, db: Session = Depends(database.get_db)):
+def read_victim(victim_id: int, db: Session = Depends(database.get_db), account: Optional[models.Account] = Depends(get_optional_user)):
     victim = crud.get_victim(db, victim_id)
     if not victim:
         raise HTTPException(status_code=404, detail="Victim not found")
-    # Public detail: hide sensitive raw numbers, show QR instead + hide citizenship doc (guarded via dedicated endpoint)
-    if victim.hospital_verified and victim.muni_verified and not victim.paused and not victim.rejected:
+    is_public = victim.hospital_verified and victim.muni_verified and not victim.paused and not victim.rejected
+    if is_public:
         victim.__dict__["bank_account_number"] = "****"
         victim.__dict__["phone"] = "***"
         if victim.other_hospital_contact:
             victim.__dict__["other_hospital_contact"] = "****"
         victim.__dict__["citizenship_doc"] = None
-    else:
-        # Even for non-public, hide citizenship doc from anonymous public detail — requires auth endpoint
+        return victim
+    # Non-public: hide existence from anon, enforce strict isolation
+    if account is None:
+        raise HTTPException(status_code=404, detail="Victim not found")
+    if not _can_access_victim(victim, account):
+        raise HTTPException(status_code=404, detail="Victim not found")
+    # Hide citizenship unless viewer is allowed via dedicated endpoint
+    if not _can_view_citizenship(victim, account):
         victim.__dict__["citizenship_doc"] = None
+    # Hide bank/phone from non-owners (hospital/muni should not see raw bank)
+    if not (account.role == "admin" or _is_owner_patient(victim, account)):
+        victim.__dict__["bank_account_number"] = "****"
+        victim.__dict__["phone"] = "***"
+        if victim.other_hospital_contact:
+            victim.__dict__["other_hospital_contact"] = "****"
     return victim
 
 
@@ -1129,11 +1199,15 @@ def upload_medical_report(
     victim_id: int,
     file: UploadFile = File(...),
     db: Session = Depends(database.get_db),
+    account: models.Account = Depends(get_current_user),
     _: bool = Depends(rate_limit(10)),
 ):
     victim = db.query(models.Victim).filter(models.Victim.id == victim_id).first()
     if not victim:
         raise HTTPException(status_code=404, detail="Victim not found")
+    # Only owner patient or admin may add reports — strict isolation
+    if not (account.role == "admin" or _is_owner_patient(victim, account)):
+        raise HTTPException(status_code=403, detail="Only the case owner can upload medical reports")
     # Medical reports: keep clear, enhance if blurry (sharpen/contrast/denoise), store up to 10 MB — not crushed to 200 KB
     contents = file.file.read()
     if len(contents) > 10 * 1024 * 1024:
@@ -1184,11 +1258,14 @@ def upload_patient_photo(
     victim_id: int,
     file: UploadFile = File(...),
     db: Session = Depends(database.get_db),
+    account: models.Account = Depends(get_current_user),
     _: bool = Depends(rate_limit(10)),
 ):
     victim = db.query(models.Victim).filter(models.Victim.id == victim_id).first()
     if not victim:
         raise HTTPException(status_code=404, detail="Victim not found")
+    if not (account.role == "admin" or _is_owner_patient(victim, account)):
+        raise HTTPException(status_code=403, detail="Only the case owner can upload patient photo")
     rel_path = save_uploaded_file(file, "photos")
     victim.patient_photo = rel_path
     db.commit()
@@ -1201,11 +1278,14 @@ def upload_collector_photo(
     collector_id: int,
     file: UploadFile = File(...),
     db: Session = Depends(database.get_db),
+    account: models.Account = Depends(get_current_user),
     _: bool = Depends(rate_limit(10)),
 ):
     victim = db.query(models.Victim).filter(models.Victim.id == victim_id).first()
     if not victim:
         raise HTTPException(status_code=404, detail="Victim not found")
+    if not (account.role == "admin" or _is_owner_patient(victim, account)):
+        raise HTTPException(status_code=403, detail="Only the case owner can upload collector photo")
     rel_path = save_uploaded_file(file, "collectors")
     collector = crud.update_collector_photo(db, collector_id, rel_path)
     if not collector:
@@ -1275,8 +1355,20 @@ def upload_citizenship_doc(
 def get_citizenship_doc(
     victim_id: int,
     db: Session = Depends(database.get_db),
-    account: models.Account = Depends(get_current_user),
+    account: Optional[models.Account] = Depends(get_optional_user),
+    token: Optional[str] = Query(None),
 ):
+    # Allow token via query param for <img src> (cannot send Authorization header)
+    if account is None and token:
+        try:
+            payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+            sub = payload.get("sub")
+            if sub is not None:
+                account = db.query(models.Account).filter(models.Account.id == int(sub)).first()
+        except Exception:
+            account = None
+    if account is None:
+        raise HTTPException(status_code=401, detail="Authentication required")
     victim = db.query(models.Victim).filter(models.Victim.id == victim_id).first()
     if not victim or not victim.citizenship_doc:
         raise HTTPException(status_code=404, detail="Citizenship document not found")
@@ -1321,6 +1413,9 @@ def upload_logo(
         raise HTTPException(status_code=404, detail="Victim not found")
     if role not in ["hospital", "municipality"]:
         raise HTTPException(status_code=400, detail="Role must be 'hospital' or 'municipality'")
+    # Strict isolation: only assigned hospital/municipality (or admin) may upload logo for this case
+    if not _can_access_victim(victim, account):
+        raise HTTPException(status_code=403, detail="Not your assigned case")
     rel_path = save_uploaded_file(file, "logos")
     if role == "hospital":
         victim.hospital_logo = rel_path
@@ -1346,6 +1441,15 @@ def verify_victim(
         raise HTTPException(status_code=400, detail="Invalid role. Use 'hospital' or 'municipality'.")
     if account.role != role and account.role != "admin":
         raise HTTPException(status_code=403, detail=f"Your account is {account.role}, cannot verify as {role}")
+    # Strict isolation: hospital/muni may only verify cases assigned to them
+    if account.role != "admin":
+        victim = db.query(models.Victim).filter(models.Victim.id == victim_id).first()
+        if not victim:
+            raise HTTPException(status_code=404, detail="Victim not found")
+        if not _can_access_victim(victim, account):
+            raise HTTPException(status_code=403, detail="Not your assigned case")
+        if role == "municipality" and not victim.hospital_verified:
+            raise HTTPException(status_code=400, detail="Hospital must verify first")
     updated_victim = crud.verify_case(db=db, victim_id=victim_id, role=role, actor=account.username)
     if not updated_victim:
         raise HTTPException(status_code=404, detail="Victim not found")
@@ -1359,6 +1463,13 @@ def reject_victim(
     db: Session = Depends(database.get_db),
     account: models.Account = Depends(require_role("hospital", "municipality", "admin")),
 ):
+    # Isolation check before reject
+    if account.role != "admin":
+        victim = db.query(models.Victim).filter(models.Victim.id == victim_id).first()
+        if not victim:
+            raise HTTPException(status_code=404, detail="Victim not found")
+        if not _can_access_victim(victim, account):
+            raise HTTPException(status_code=403, detail="Not your assigned case")
     updated_victim = crud.reject_case(db=db, victim_id=victim_id, role=account.role, reason=reason, actor=account.username)
     if not updated_victim:
         raise HTTPException(status_code=404, detail="Victim not found")

@@ -3,6 +3,7 @@ import { victimsAPI, getUser, authAPI } from '/src/api.js';
 const user = getUser();
 if (!user || (user.role !== 'municipality' && user.role !== 'admin')) {
   document.querySelector('.page').innerHTML = '<div class="card" style="padding:40px;text-align:center;max-width:400px;margin:40px auto;"><h2 style="font-size:20px;margin-bottom:8px;">Municipality access only</h2><p class="hint">Please sign in with a municipality account.</p><a href="login.html" class="btn btn-primary" style="margin-top:16px;display:inline-flex;">Sign in</a></div>';
+  setTimeout(()=>{ if(!user) window.location.href='login.html'; else window.location.href = user.role==='patient' ? 'dashboard.html' : user.role==='hospital' ? 'hospital.html' : user.role==='admin' ? 'god.html' : 'index.html'; }, 1200);
   throw new Error('Not municipality');
 }
 
@@ -99,19 +100,21 @@ function showDetail(row) {
 
   let citizenshipHtml = '';
   if (v.citizenship_doc) {
+    const _tok = (getUser()?.token||'');
+    const _citUrl = `/victims/${v.id}/citizenship-doc${_tok? '?token='+encodeURIComponent(_tok):''}`;
     const isPdf = v.citizenship_doc.toLowerCase().endsWith('.pdf');
     if (isPdf) {
       citizenshipHtml = `<div style="margin-top:16px;padding:14px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;">
         <div style="font-size:13px;font-weight:600;margin-bottom:6px;">Government ID / Citizenship <span class="pill blue" style="font-size:10px;">restricted</span></div>
         <p class="hint" style="font-size:12px;margin-bottom:8px;">Compressed to &lt;200 KB · Visible only to you, municipality, and admin.</p>
-        <a href="/uploads/${v.citizenship_doc}" target="_blank" class="btn btn-outline btn-sm">View citizenship document (PDF)</a>
+        <a href="${_citUrl}" target="_blank" class="btn btn-outline btn-sm">View citizenship document (PDF)</a>
       </div>`;
     } else {
       citizenshipHtml = `<div style="margin-top:16px;padding:14px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;">
         <div style="font-size:13px;font-weight:600;margin-bottom:6px;">Government ID / Citizenship <span class="pill blue" style="font-size:10px;">restricted</span></div>
         <p class="hint" style="font-size:12px;margin-bottom:8px;">Compressed to &lt;200 KB · Only you, municipality, and admin can view.</p>
         <div style="text-align:center;background:#fff;border:1px solid var(--gray-200);border-radius:8px;padding:8px;">
-          <img src="/uploads/${v.citizenship_doc}" alt="Citizenship document" style="max-width:100%;max-height:320px;object-fit:contain;display:block;margin:0 auto;">
+          <img src="${_citUrl}" alt="Citizenship document" style="max-width:100%;max-height:320px;object-fit:contain;display:block;margin:0 auto;">
         </div>
       </div>`;
     }

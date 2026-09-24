@@ -3,17 +3,122 @@ import { adminAPI, getUser } from '/src/api.js';
 const user = getUser();
 if (!user || user.role !== 'admin') {
   document.getElementById('adminPage').innerHTML = '<div class="card" style="padding:40px;text-align:center;max-width:400px;margin:40px auto;"><h2 style="font-size:20px;margin-bottom:8px;">God access only</h2><p class="hint">Sign in with the god account (niroj).</p><a href="login.html" class="btn btn-primary" style="margin-top:16px;display:inline-flex;">Go to login</a></div>';
+  setTimeout(()=>{ if(!user) window.location.href='login.html'; else window.location.href = user.role==='patient' ? 'dashboard.html' : user.role==='hospital' ? 'hospital.html' : user.role==='municipality' ? 'municipality.html' : 'index.html'; }, 1200);
   throw new Error('Not god');
 }
 
+const _drawerLoaded = new Set();
+let _currentSection = 'overview';
+
+function showSection(name){
+  _currentSection = name;
+  document.querySelectorAll('#adminMain [data-section]').forEach(sec=>{
+    sec.hidden = sec.dataset.section !== name;
+  });
+  document.querySelectorAll('.drawer-nav a').forEach(a=>{
+    a.classList.toggle('active', a.dataset.section===name);
+  });
+  // Close mobile overlay
+  document.getElementById('adminDrawer')?.classList.remove('open');
+  document.getElementById('drawerOverlay')?.classList.remove('open');
+  // Persist hash
+  if(location.hash.slice(1)!==name) history.replaceState(null,'','#'+name);
+  // Lazy load section data
+  if(_drawerLoaded.has(name)) return;
+  _drawerLoaded.add(name);
+  if(name==='overview') loadStats();
+  else if(name==='cases') loadVictims();
+  else if(name==='accounts') loadAccounts();
+  else if(name==='create') { /* no load needed */ }
+  else if(name==='unregistered') loadUnregisteredHospitals();
+  else if(name==='email') loadEmailSettings();
+  else if(name==='pwd') loadPasswordRequests();
+  else if(name==='audit') loadAuditLog();
+  // Always keep stats fresh for badges
+  if(name!=='overview') loadStats().catch(()=>{});
+}
+
+function initDrawer(){
+  const drawer = document.getElementById('adminDrawer');
+  const overlay = document.getElementById('drawerOverlay');
+  const toggle = document.getElementById('adminDrawerToggle');
+  const collapseBtn = document.getElementById('drawerCollapseBtn');
+  const shell = document.getElementById('adminShell');
+  // Restore collapsed state
+  try{
+    if(localStorage.getItem('trustmed_admin_drawer_collapsed')==='1' && window.innerWidth>768){
+      drawer?.classList.add('collapsed');
+      collapseBtn.textContent='›';
+    }
+  }catch{}
+  // Nav clicks
+  document.querySelectorAll('.drawer-nav a').forEach(a=>{
+    a.addEventListener('click', (e)=>{
+      e.preventDefault();
+      const sec = a.dataset.section;
+      if(sec) showSection(sec);
+    });
+  });
+  toggle?.addEventListener('click', ()=>{
+    if(window.innerWidth<=768){
+      drawer?.classList.toggle('open');
+      overlay?.classList.toggle('open');
+    }else{
+      // desktop collapse toggle
+      const isCollapsed = drawer?.classList.toggle('collapsed');
+      collapseBtn.textContent = isCollapsed ? '›' : '‹';
+      try{ localStorage.setItem('trustmed_admin_drawer_collapsed', isCollapsed?'1':'0'); }catch{}
+    }
+  });
+  collapseBtn?.addEventListener('click', ()=>{
+    if(window.innerWidth<=768){
+      drawer?.classList.remove('open');
+      overlay?.classList.remove('open');
+    }else{
+      const isCollapsed = drawer?.classList.toggle('collapsed');
+      collapseBtn.textContent = isCollapsed ? '›' : '‹';
+      try{ localStorage.setItem('trustmed_admin_drawer_collapsed', isCollapsed?'1':'0'); }catch{}
+    }
+  });
+  overlay?.addEventListener('click', ()=>{
+    drawer?.classList.remove('open');
+    overlay?.classList.remove('open');
+  });
+  // Hash routing
+  window.addEventListener('hashchange', ()=>{
+    const h = location.hash.slice(1);
+    if(h && document.querySelector(`[data-section="${h}"]`)) showSection(h);
+  });
+  // Initial section from hash or default
+  const initial = location.hash.slice(1) || 'overview';
+  if(document.querySelector(`[data-section="${initial}"]`)) showSection(initial);
+  else showSection('overview');
+  // If initial was overview, we already loaded stats; ensure badges update after all loads
+  loadStats().then(()=>{ // update drawer badges after stats
+    // also trigger loads for badge counts if not yet
+    loadUnregisteredHospitals(); loadPasswordRequests(); loadVictims(); loadAccounts();
+  }).catch(()=>{});
+}
+
 async function loadAll() {
+  initDrawer();
+  // Eager load stats for overview; other sections lazy via showSection
   await loadStats();
-  await loadVictims();
-  await loadUnregisteredHospitals();
-  await loadAccounts();
-  await loadAuditLog();
-  await loadEmailSettings();
-  await loadPasswordRequests();
+  // Preload badge counts in background without blocking
+  Promise.allSettled([loadUnregisteredHospitals(), loadPasswordRequests(), loadVictims(), loadAccounts()]).then(()=>updateDrawerBadges());
+}
+
+function updateDrawerBadges(){
+  try{
+    const casesTxt = document.getElementById('casesCount')?.textContent || '';
+    const mCases = casesTxt.match(/\d+/);
+    const dc = document.getElementById('drawerCasesCount');
+    if(dc){ if(mCases){ dc.textContent=mCases[0]; dc.style.display='inline-flex'; } else dc.style.display='none'; }
+    const acc = document.getElementById('statAccounts')?.textContent || '';
+    const da = document.getElementById('drawerAccountsCount');
+    if(da){ if(acc && acc!=='-' && acc.trim()!==''){ da.textContent=acc.trim(); da.style.display='inline-flex'; } else da.style.display='none'; }
+    // Unreg and pwd counts are updated in their loaders, but also reflect here if needed
+  }catch{}
 }
 
 async function loadStats() {
@@ -25,6 +130,7 @@ async function loadStats() {
     document.getElementById('statPendingHosp').textContent = s.pending_hospital;
     document.getElementById('statPendingMun').textContent = s.pending_municipality;
     document.getElementById('statVerified').textContent = s.verified;
+    updateDrawerBadges();
   } catch (err) { console.error('Stats error:', err); }
 }
 
@@ -41,7 +147,9 @@ async function loadVictims() {
   try {
     const victims = await adminAPI.listVictims();
     document.getElementById('casesCount').textContent = victims.length + ' cases';
-    if (victims.length === 0) { wrap.innerHTML = '<p class="hint" style="padding:16px;">No cases yet.</p>'; return; }
+    const dcc = document.getElementById('drawerCasesCount');
+    if(dcc){ dcc.textContent = String(victims.length); dcc.style.display = victims.length? 'inline-flex':'none'; }
+    if (victims.length === 0) { wrap.innerHTML = '<p class="hint" style="padding:16px;">No cases yet.</p>'; updateDrawerBadges(); return; }
 
     let html = '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
     html += '<thead><tr style="border-bottom:2px solid var(--gray-200);">';
@@ -87,6 +195,8 @@ async function loadUnregisteredHospitals() {
     card.hidden = false;
     card.style.display = 'block';
     if (countEl) { countEl.textContent = victims.length + ' pending'; countEl.style.display = 'inline-flex'; }
+    const duc = document.getElementById('drawerUnregCount');
+    if(duc){ duc.textContent = String(victims.length); duc.style.display = victims.length? 'inline-flex':'none'; }
     list.innerHTML = victims.map(v => `
       <div style="display:flex;gap:12px;align-items:center;padding:12px;border:1px solid var(--gray-200);border-radius:8px;margin-bottom:8px;background:#fff;">
         <div style="flex:1;min-width:0;">
@@ -141,24 +251,25 @@ window.showCaseDetail = async function(id) {
     const v = await victimsAPI.get(id);
     const modal = document.getElementById('caseModalContent');
     const st = statusLabel(v);
-    // Fetch citizenship doc meta for admin (victim/municipality/admin visibility) — admin role can view
+    // Fetch citizenship doc meta for admin (victim/municipality/admin visibility) — admin role can view via auth-gated endpoint
     let citizenshipHtml = '';
     try {
       const meta = await victimsAPI.getCitizenshipMeta(id);
       if (meta && meta.citizenship_doc) {
+        const _tok = (getUser()?.token||'');
+        const _citUrl = victimsAPI.getCitizenshipDocUrl(id) + (_tok? '?token='+encodeURIComponent(_tok):'');
         const isPdf = meta.citizenship_doc.toLowerCase().endsWith('.pdf');
         if (isPdf) {
           citizenshipHtml = `<div style="margin-top:12px;padding:10px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;">
             <strong style="font-size:13px;">Government ID / Citizenship <span class="pill blue" style="font-size:10px;">restricted</span></strong>
-            <p class="hint" style="font-size:11px;margin:4px 0 6px;">Compressed to &lt;200 KB</p>
-            <a href="/uploads/${meta.citizenship_doc}" target="_blank" class="btn btn-outline btn-sm">View PDF</a>
-            <a href="${victimsAPI.getCitizenshipDocUrl(id)}" style="margin-left:8px;font-size:11px;color:var(--primary);" onclick="event.preventDefault(); fetch('${victimsAPI.getCitizenshipDocUrl(id)}',{headers:{Authorization:'Bearer '+ (getUser()?.token||'')}}).then(r=>r.blob()).then(b=>{const u=URL.createObjectURL(b); window.open(u,'_blank');}); return false;">Auth fetch</a>
+            <p class="hint" style="font-size:11px;margin:4px 0 6px;">Compressed to &lt;200 KB · Private</p>
+            <a href="${_citUrl}" target="_blank" class="btn btn-outline btn-sm">View PDF (auth)</a>
           </div>`;
         } else {
           citizenshipHtml = `<div style="margin-top:12px;padding:10px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;">
             <strong style="font-size:13px;">Government ID / Citizenship <span class="pill blue" style="font-size:10px;">restricted</span></strong>
             <p class="hint" style="font-size:11px;margin:4px 0 6px;">Compressed to &lt;200 KB · admin/municipality/owner only</p>
-            <img src="/uploads/${meta.citizenship_doc}" alt="Citizenship" style="max-width:100%;max-height:240px;object-fit:contain;display:block;margin:0 auto;background:#fff;border:1px solid var(--gray-200);border-radius:6px;">
+            <img src="${_citUrl}" alt="Citizenship" style="max-width:100%;max-height:240px;object-fit:contain;display:block;margin:0 auto;background:#fff;border:1px solid var(--gray-200);border-radius:6px;">
           </div>`;
         }
       } else {
@@ -249,6 +360,9 @@ async function loadAccounts() {
     const accounts = await adminAPI.listAccounts();
     const nonAdmin = accounts.filter(a => a.role !== 'admin');
     document.getElementById('statAccounts').textContent = nonAdmin.length;
+    const dac = document.getElementById('drawerAccountsCount');
+    if(dac){ dac.textContent = String(nonAdmin.length); dac.style.display = nonAdmin.length? 'inline-flex':'none'; }
+    updateDrawerBadges();
     if (nonAdmin.length === 0) { el.innerHTML = '<p class="hint">No accounts.</p>'; return; }
 
     let html = '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
@@ -325,6 +439,8 @@ async function loadPasswordRequests(){
     if(reqs.length===0){ list.innerHTML='<p class="hint">No pending requests.</p>'; if(cnt) cnt.style.display='none'; return; }
     const pending = reqs.filter(r=>r.status==='pending');
     if(cnt){ cnt.textContent = pending.length+' pending'; cnt.style.display = pending.length?'inline-flex':'none'; }
+    const dpc = document.getElementById('drawerPwdCount');
+    if(dpc){ dpc.textContent = String(pending.length); dpc.style.display = pending.length? 'inline-flex':'none'; }
     list.innerHTML = reqs.map(r=>`
       <div style="border:1px solid var(--gray-200);border-radius:8px;padding:10px;margin-bottom:8px;background:${r.status==='pending'?'#fffbeb':'#fff'};">
         <div style="display:flex;justify-content:space-between;gap:8px;">

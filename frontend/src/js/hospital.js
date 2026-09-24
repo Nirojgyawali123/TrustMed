@@ -3,6 +3,8 @@ import { victimsAPI, getUser, authAPI } from '/src/api.js';
 const user = getUser();
 if (!user || (user.role !== 'hospital' && user.role !== 'admin')) {
   document.querySelector('.page').innerHTML = '<div class="card" style="padding:40px;text-align:center;max-width:400px;margin:40px auto;"><h2 style="font-size:20px;margin-bottom:8px;">Hospital access only</h2><p class="hint">Please sign in with a hospital account.</p><a href="login.html" class="btn btn-primary" style="margin-top:16px;display:inline-flex;">Sign in</a></div>';
+  // Enforce strict isolation: non-hospital cannot stay on this page
+  setTimeout(()=>{ if(!user) window.location.href='login.html'; else window.location.href = user.role==='patient' ? 'dashboard.html' : user.role==='municipality' ? 'municipality.html' : user.role==='admin' ? 'god.html' : 'index.html'; }, 1200);
   throw new Error('Not hospital');
 }
 

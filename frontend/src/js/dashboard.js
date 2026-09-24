@@ -3,6 +3,7 @@ import { victimsAPI, getUser } from '/src/api.js';
 const user = getUser();
 if (!user || user.role !== 'patient') {
   document.getElementById('casesContainer').innerHTML = '<div class="card" style="padding:40px;text-align:center;max-width:400px;margin:40px auto;"><h2 style="font-size:20px;margin-bottom:8px;">Please sign in first</h2><p class="hint">You need a patient account to view your cases.</p><a href="login.html" class="btn btn-primary" style="margin-top:16px;display:inline-flex;">Sign in</a></div>';
+  setTimeout(()=>{ if(!user) window.location.href='login.html'; else window.location.href = user.role==='hospital' ? 'hospital.html' : user.role==='municipality' ? 'municipality.html' : user.role==='admin' ? 'god.html' : 'index.html'; }, 1200);
   throw new Error('Not authenticated');
 }
 
@@ -47,8 +48,10 @@ async function load() {
       const reportsHtml = (v.medical_reports && v.medical_reports.length > 0)
         ? v.medical_reports.map(r => `<a href="/uploads/${r.filename}" target="_blank" class="report-item" style="font-size:12px;">${r.original_name}</a>`).join('')
         : '<span class="hint" style="font-size:12px;">No reports</span>';
+      // Citizenship is private — use auth-gated endpoint with token, not /uploads/
+      const _citToken = (getUser()?.token||'');
       const citizenshipBadge = v.citizenship_doc
-        ? `<a href="/uploads/${v.citizenship_doc}" target="_blank" style="font-size:12px;color:var(--primary);">Gov ID ✓ (${(v.citizenship_doc.endsWith('.pdf')?'PDF':'IMG')}, &lt;200 KB)</a>`
+        ? `<a href="/victims/${v.id}/citizenship-doc${_citToken? '?token='+encodeURIComponent(_citToken):''}" target="_blank" style="font-size:12px;color:var(--primary);">Gov ID ✓ (${(v.citizenship_doc.endsWith('.pdf')?'PDF':'IMG')}, &lt;200 KB)</a>`
         : '<span class="hint" style="font-size:12px;color:var(--danger);">Gov ID missing</span>';
 
       const collectorsCount = v.collectors ? v.collectors.length : 0;
