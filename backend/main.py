@@ -1114,6 +1114,48 @@ def admin_unpause_victim(victim_id: int, db: Session = Depends(database.get_db),
     return {"detail": "Case unpaused", "id": victim_id}
 
 
+@backend.delete("/admin/victims/{victim_id}")
+def admin_delete_victim(victim_id: int, db: Session = Depends(database.get_db), admin: models.Account = Depends(require_role("admin"))):
+    victim = db.query(models.Victim).filter(models.Victim.id == victim_id).first()
+    if not victim:
+        raise HTTPException(status_code=404, detail="Victim not found")
+    case_id = victim.case_id
+    name = victim.name
+    # Collect file paths before delete (cascade will remove DB rows)
+    file_paths: list[str] = []
+    if victim.patient_photo:
+        file_paths.append(os.path.join(UPLOAD_DIR, victim.patient_photo))
+    if victim.citizenship_doc:
+        file_paths.append(os.path.join(UPLOAD_DIR, victim.citizenship_doc))
+    if victim.hospital_logo:
+        file_paths.append(os.path.join(UPLOAD_DIR, victim.hospital_logo))
+    if victim.municipality_logo:
+        file_paths.append(os.path.join(UPLOAD_DIR, victim.municipality_logo))
+    if victim.bank_qr:
+        file_paths.append(os.path.join(UPLOAD_DIR, victim.bank_qr))
+    # Collect related collectors/photos and reports
+    try:
+        for c in list(victim.collectors):
+            if c.photo:
+                file_paths.append(os.path.join(UPLOAD_DIR, c.photo))
+        for r in list(victim.medical_reports):
+            if r.filename:
+                file_paths.append(os.path.join(UPLOAD_DIR, r.filename))
+    except Exception:
+        pass
+    db.delete(victim)
+    db.commit()
+    # Remove files after commit
+    for fp in file_paths:
+        try:
+            if fp and os.path.exists(fp):
+                os.remove(fp)
+        except Exception:
+            pass
+    crud.log_action(db, "case_deleted", admin.username, "admin", victim_id, f"Case deleted by admin: {case_id} - {name}")
+    return {"detail": f"Case {case_id} deleted", "id": victim_id}
+
+
 # ──────────────────────────────────────────
 # Victim / Case endpoints
 # ──────────────────────────────────────────

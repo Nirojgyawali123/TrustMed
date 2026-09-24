@@ -125,6 +125,7 @@ export const adminAPI = {
   logs: () => api('/admin/logs'),
   pause: (id) => api(`/admin/victims/${id}/pause`, { method: 'PATCH' }),
   unpause: (id) => api(`/admin/victims/${id}/unpause`, { method: 'PATCH' }),
+  deleteVictim: (id) => api(`/admin/victims/${id}`, { method: 'DELETE' }),
   listUnregisteredHospitals: () => api('/admin/unregistered-hospitals'),
   verifyUnregisteredHospital: (id) => api(`/admin/unregistered-hospitals/${id}/verify`, { method: 'POST' }),
   listHospitals: () => api('/hospitals'),

@@ -328,6 +328,7 @@ async function loadVictims() {
       html += `<td style="padding:8px 6px;text-align:center;">${v.paused ? '🚫' : '-'}</td>`;
       html += `<td style="padding:8px 6px;">
         <button class="btn btn-sm ${v.paused ? 'btn-green' : 'btn-danger'}" style="font-size:10px;padding:3px 8px;" onclick="event.stopPropagation(); togglePause(${v.id}, ${v.paused})">${v.paused ? 'Resume' : 'Pause'}</button>
+        <button class="btn btn-sm btn-danger" style="font-size:10px;padding:3px 8px;margin-left:6px;" onclick="event.stopPropagation(); deleteCase(${v.id})">Delete</button>
       </td></tr>`;
     });
     html += '</tbody></table>';
@@ -494,6 +495,11 @@ window.showCaseDetail = async function(id) {
           ${collectorsHtml ? `<div style="margin-top:12px;"><strong style="font-size:13px;">Collectors (${v.collectors.length}):</strong><div style="margin-top:4px;">${collectorsHtml}</div></div>` : ''}
         </div>
       </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;border-top:1px solid var(--gray-100);padding-top:12px;">
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('caseModal').classList.remove('open')">Close</button>
+        <button class="btn btn-sm ${v.paused ? 'btn-green' : 'btn-danger'}" style="font-size:12px;" onclick="event.stopPropagation(); togglePause(${v.id}, ${v.paused}); document.getElementById('caseModal').classList.remove('open');">${v.paused ? 'Resume' : 'Pause'}</button>
+        <button class="btn btn-danger btn-sm" style="font-size:12px;" onclick="deleteCase(${v.id})">Delete case</button>
+      </div>
     `;
     document.getElementById('caseModal').classList.add('open');
   } catch (err) {
@@ -514,6 +520,21 @@ window.togglePause = async function(id, isPaused) {
     await loadVictims();
     await loadStats();
   } catch (err) { msg.textContent = err.message; }
+};
+
+window.deleteCase = async function(id) {
+  if (!confirm(`Delete case #${id}? This will permanently delete the case, its collectors and reports. This cannot be undone.`)) return;
+  const msg = document.getElementById('adminMsg');
+  try {
+    await adminAPI.deleteVictim(id);
+    if (msg) msg.textContent = `Case #${id} deleted.`;
+    document.getElementById('caseModal')?.classList.remove('open');
+    await loadVictims();
+    await loadStats();
+  } catch (err) {
+    if (msg) msg.textContent = err.message;
+    else alert(err.message);
+  }
 };
 
 async function loadAccounts() {
