@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /src/pages/god.html
+Disallow: /src/pages/hospital.html
+Disallow: /src/pages/municipality.html
+Disallow: /src/pages/dashboard.html
+Disallow: /src/pages/submit.html
+Disallow: /src/pages/404.html
+Sitemap: https://trust-med-fyvy.vercel.app/sitemap.xml

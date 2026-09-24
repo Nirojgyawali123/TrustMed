@@ -1,16 +1,125 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TrustMed — Verified Medical Aid</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <script>
-      window.location.href = '/src/pages/index.html';
-    </script>
-  </head>
-  <body>
-    <p>Redirecting to TrustMed...</p>
-  </body>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TrustMed — Verified Medical Crowdfunding</title>
+<meta name="description" content="Medical aid you can trust — every case is confirmed by the treating hospital and municipal ward before going public. Donate to verified patients in Nepal.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://trust-med-fyvy.vercel.app/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/src/css/style.css">
+</head>
+<body>
+<div class="topbar">
+  <div class="brand">
+    <span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2"><path d="M12 2 4 5v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V5l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg></span>
+    <span>TrustMed</span>
+  </div>
+  <div class="nav">
+    <a href="/src/pages/index.html">Home</a>
+    <a href="/src/pages/cases.html">Browse Cases</a>
+  </div>
+  <div class="nav-right">
+    <a href="/src/pages/login.html" class="btn btn-outline btn-sm">Sign in</a>
+    <a href="/src/pages/signup.html" class="btn btn-primary btn-sm">Start a Fundraiser</a>
+  </div>
+</div>
+<script type="module" src="/src/js/topbar.js"></script>
+
+<div class="hero">
+  <h1>Medical aid you can trust, verified every step</h1>
+  <p>Every case is confirmed by the treating hospital and the municipal ward office before going public. Your donation reaches real people with verified needs.</p>
+  <div class="hero-actions">
+    <a href="/src/pages/signup.html" class="btn btn-primary">Start a Fundraiser</a>
+    <a href="/src/pages/cases.html" class="btn btn-ghost">Browse Cases →</a>
+  </div>
+</div>
+
+<div class="trust-strip">
+  <div class="trust-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 2 4 5v6c0 4.2 2.8 7.2 8 10 5.2-2.8 8-5.8 8-10V5l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg>Diagnosis confirmed by hospital</div>
+  <div class="trust-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Identity verified by municipality</div>
+  <div class="trust-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-6l-2-2H5a2 2 0 0 0-2 2Z"/></svg>Funds go to verified bank account</div>
+</div>
+
+<div class="page" style="padding-top:0;">
+  <div class="section-head" style="margin-bottom:10px;">
+    <h2 class="section-title">Find a case</h2>
+  </div>
+  <div class="search-row">
+    <input type="text" id="searchInput" placeholder="Enter Case ID" aria-label="Search by Case ID">
+    <button type="button" class="btn btn-primary" onclick="searchCase()">Search</button>
+  </div>
+
+  <div class="section-head">
+    <h2 class="section-title">Verified cases needing support</h2>
+    <a href="/src/pages/cases.html" class="hint" style="font-size:13px;font-weight:500;">View all →</a>
+  </div>
+  <div id="caseGrid" style="min-height:200px;">
+    <div class="empty-state">Loading cases…</div>
+  </div>
+</div>
+
+<script type="module">
+import { victimsAPI } from '/src/api.js';
+
+window.searchCase = function() {
+  const q = document.getElementById('searchInput').value.trim();
+  if (!q) return;
+  window.location.href = '/src/pages/cases.html?search=' + encodeURIComponent(q);
+};
+
+async function load() {
+  const grid = document.getElementById('caseGrid');
+  try {
+    const victims = await victimsAPI.getAll();
+    const approved = victims.filter(v => v.hospital_verified && v.muni_verified && !v.paused);
+
+    if (approved.length === 0) {
+      grid.innerHTML = '<div class="card" style="text-align:center;padding:40px 24px;"><p style="font-size:15px;font-weight:600;color:var(--gray-800);margin-bottom:4px;">No cases yet</p><p class="hint">When a case is verified by the hospital and municipality, it will appear here.</p></div>';
+      return;
+    }
+
+    grid.innerHTML = '<div class="case-grid">' + approved.slice(0, 6).map(v => {
+      const pct = v.total_collected && v.estimated_cost ? Math.min(100, (v.total_collected / v.estimated_cost) * 100) : 0;
+      const raised = '₨ ' + Number(v.total_collected || 0).toLocaleString();
+      const goal = '₨ ' + Number(v.estimated_cost).toLocaleString();
+      const photoAvatar = v.patient_photo
+        ? `<img src="/uploads/${v.patient_photo}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;display:block;">`
+        : `<div class="case-avatar">${v.name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}</div>`;
+      return `<div class="case-card" tabindex="0" role="button" aria-label="View case ${v.name}" onclick="window.location.href='/src/pages/case.html?id=${v.id}'" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.location.href='/src/pages/case.html?id=${v.id}'}">
+        <div class="case-card-top">
+          ${photoAvatar}
+          <div class="case-info">
+            <div class="case-name">${v.name}</div>
+            <div class="case-meta">${v.municipality_name} · ${v.case_id || '#'+v.id}</div>
+          </div>
+        </div>
+        <div class="case-desc">${v.disease}</div>
+        <div class="case-stats">
+          <div class="case-progress"><div class="case-progress-fill" style="width:${pct}%"></div></div>
+          <div class="case-numbers">
+            <span class="case-raised">${raised}</span>
+            <span class="case-goal">${pct.toFixed(0)}% of ${goal}</span>
+          </div>
+        </div>
+        <div class="case-footer">
+          <span class="case-badge green">Hospital verified</span>
+          <span class="case-badge blue">Municipality approved</span>
+        </div>
+      </div>`;
+    }).join('') + '</div>';
+
+    if (approved.length > 6) {
+      grid.innerHTML += '<div class="text-center mt-24"><a href="/src/pages/cases.html" class="btn btn-outline btn-sm">View all ' + approved.length + ' cases</a></div>';
+    }
+  } catch (err) {
+    grid.innerHTML = '<div class="empty-state">Could not load cases. Make sure the backend is running.</div>';
+  }
+}
+
+load();
+</script>
+</body>
 </html>

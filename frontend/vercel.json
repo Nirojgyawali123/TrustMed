@@ -2,5 +2,21 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm install",
-  "framework": "vite"
+  "framework": "vite",
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "redirects": [
+    { "source": "/src/pages/index.html", "destination": "/", "permanent": true },
+    { "source": "/src/pages", "destination": "/", "permanent": true }
+  ],
+  "headers": [
+    {
+      "source": "/src/pages/(god|hospital|municipality|dashboard|submit|404).html",
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive" }]
+    },
+    {
+      "source": "/src/pages/index.html",
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+    }
+  ]
 }
