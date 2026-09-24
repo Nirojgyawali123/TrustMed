@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: trustmed-api
+    name: trustmed-uzm1
     env: python
     region: singapore
     plan: free
