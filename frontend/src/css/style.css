@@ -40,7 +40,7 @@ a:hover { text-decoration: underline; }
 .brand .mark svg { width: 16px; height: 16px; stroke: #fff; }
 .brand small { font-weight: 400; font-size: 12px; color: var(--gray-400); margin-left: 4px; display: none; }
 @media (min-width: 640px) { .brand small { display: inline; } }
-.nav { display: flex; align-items: center; gap: 2px; flex: 1; }
+.nav { display: flex; align-items: center; gap: 2px; flex: 1; justify-content: center; min-width: 0; }
 .nav a { color: var(--gray-600); font-size: 13.5px; font-weight: 500; padding: 7px 12px; border-radius: 7px; transition: background .12s, color .12s; }
 .nav a:hover { background: var(--gray-100); color: var(--gray-900); text-decoration: none; }
 .nav a.active { background: var(--gray-100); color: var(--gray-900); }
@@ -198,8 +198,8 @@ a:hover { text-decoration: underline; }
 
 .collector-photo-preview { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 2px solid #fff; box-shadow: var(--shadow); }
 
-.login-shell { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; background: #fff; }
-.login-card { background: #fff; border-radius: var(--radius-lg); border: 1px solid var(--gray-200); padding: 28px; width: 100%; max-width: 400px; }
+.login-shell { min-height: calc(100vh - 56px); min-height: calc(100dvh - 56px); min-height: calc(100svh - 56px); display: flex; align-items: center; justify-content: center; padding: 24px; padding-top: max(24px, env(safe-area-inset-top)); padding-bottom: max(24px, env(safe-area-inset-bottom)); background: #fff; box-sizing: border-box; overflow: hidden; }
+.login-card { background: #fff; border-radius: var(--radius-lg); border: 1px solid var(--gray-200); padding: 28px; width: 100%; max-width: 400px; margin: 0 auto; box-sizing: border-box; }
 .login-card h1 { font-size: 22px; font-weight: 700; margin: 4px 0 4px; line-height: 1.25; }
 .login-card .sub { color: var(--gray-500); font-size: 13.5px; margin-bottom: 20px; line-height: 1.5; }
 
@@ -274,7 +274,8 @@ a:hover { text-decoration: underline; }
 .admin-shell .page { max-width: none; margin: 0; padding: 0 20px 32px; }
 
 /* — Mobile excellence (Instagram/Facebook craft): 360-430 no horizontal scroll, safe-area aware — */
-html, body { overflow-x: clip; max-width: 100vw; }
+html, body { overflow-x: clip; max-width: 100%; }
+html { scrollbar-gutter: stable; }
 .search-row input, .field input, .field textarea { min-width: 0; }
 
 /* Page + hero safe padding */
@@ -297,17 +298,30 @@ html, body { overflow-x: clip; max-width: 100vw; }
   .page { padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); }
 }
 
-/* Topbar: Instagram-clean scroll, no horizontal page scroll */
+.nav-toggle { display: none; align-items: center; justify-content: center; width: 36px; height: 36px; border: none; background: transparent; border-radius: 8px; cursor: pointer; flex-shrink: 0; }
+.nav-toggle:hover { background: var(--gray-100); }
+.nav-toggle:active { background: var(--gray-200); }
+.nav-toggle svg { width: 20px; height: 20px; stroke: var(--gray-700); }
+.nav-overlay { display: none; position: fixed; inset: 56px 0 0 0; background: rgba(17,24,39,.28); backdrop-filter: blur(1px); z-index: 39; }
+
+/* Topbar: Instagram-clean — hamburger drawer on mobile, no horizontal page scroll */
 @media (max-width: 640px) {
-  .topbar { padding: 0 12px; gap: 8px; min-height: 56px; height: auto; padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); }
-  .brand { font-size: 15px; gap: 8px; }
+  .topbar { padding: 0 12px; gap: 8px; min-height: 56px; height: auto; padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); flex-wrap: nowrap; }
+  .brand { font-size: 15px; gap: 8px; flex-shrink: 0; }
   .brand .mark { width: 26px; height: 26px; }
-  .nav { flex: 1 1 auto; min-width: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; gap: 2px; scroll-snap-type: x proximity; padding-bottom: 2px; }
-  .nav::-webkit-scrollbar { display: none; }
-  .nav a { flex-shrink: 0; scroll-snap-align: start; padding: 6px 10px; font-size: 13px; }
-  .nav-right { gap: 6px; flex-shrink: 0; }
-  .nav-right .btn-sm { padding: 6px 10px; font-size: 12.5px; }
+  .nav { display: none; position: absolute; top: 56px; left: 0; right: 0; background: #fff; border-bottom: 1px solid var(--gray-200); flex-direction: column; align-items: stretch; gap: 2px; padding: 10px 12px; padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); box-shadow: var(--shadow-md); z-index: 40; max-height: calc(100vh - 56px); overflow: auto; }
+  .nav.open { display: flex; }
+  .nav a { flex-shrink: 0; padding: 10px 12px; font-size: 14px; border-radius: 8px; width: 100%; }
+  .nav-right { gap: 6px; flex-shrink: 0; margin-left: auto; }
+  .nav-right .btn-sm { padding: 7px 12px; font-size: 13px; white-space: nowrap; }
+  .nav-right .btn-sm:last-child { padding: 7px 10px; }
   .brand .pill { font-size: 10px; padding: 2px 7px; }
+  .nav-toggle { display: inline-flex; }
+  .nav-overlay.open { display: block; }
+}
+@media (min-width: 641px) {
+  .nav-toggle { display: none !important; }
+  .nav-overlay { display: none !important; }
 }
 
 /* Grids: never exceed viewport */

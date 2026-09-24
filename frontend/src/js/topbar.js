@@ -69,12 +69,45 @@ export function renderTopbar() {
     }
   }
 
-  el.innerHTML = `${brandHtml}<div class="nav">${navHtml}</div><div class="nav-right">${rightHtml}</div>`;
+  const toggleHtml = `<button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>`;
+  el.innerHTML = `${brandHtml}<div class="nav" id="publicNav">${navHtml}</div><div class="nav-right">${rightHtml}</div>${toggleHtml}`;
+  // ensure overlay exists once per page (outside topbar for fixed positioning)
+  let overlay = document.getElementById('navOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'navOverlay';
+    overlay.className = 'nav-overlay';
+    overlay.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(overlay);
+  }
 
   // bind logout
   el.querySelectorAll('[data-logout]').forEach(a => {
     a.addEventListener('click', (e) => { e.preventDefault(); logout(); });
   });
+
+  // mobile nav toggle (no horizontal scroll, drawer instead)
+  const nav = el.querySelector('#publicNav');
+  const toggle = el.querySelector('#navToggle');
+  const closeNav = () => {
+    nav?.classList.remove('open');
+    overlay?.classList.remove('open');
+    toggle?.setAttribute('aria-expanded', 'false');
+  };
+  const openNav = () => {
+    nav?.classList.add('open');
+    overlay?.classList.add('open');
+    toggle?.setAttribute('aria-expanded', 'true');
+  };
+  toggle?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (nav?.classList.contains('open')) closeNav(); else openNav();
+  });
+  overlay?.addEventListener('click', closeNav);
+  // close on link click, escape, resize to desktop
+  nav?.querySelectorAll('a').forEach(a => a.addEventListener('click', closeNav));
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeNav(); });
+  window.addEventListener('resize', () => { if (window.innerWidth > 640) closeNav(); });
 
   // hero CTA conditional — patient goes to submit, others to signup
   const heroPrimary = document.querySelector('.hero-actions a.btn-primary');
