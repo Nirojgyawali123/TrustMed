@@ -93,6 +93,8 @@ function initDrawer(){
   const initial = location.hash.slice(1) || 'overview';
   if(document.querySelector(`[data-section="${initial}"]`)) showSection(initial);
   else showSection('overview');
+  // Search (global + per-section)
+  try{ initAdminSearch(); }catch(e){ console.warn('search init', e); }
   // If initial was overview, we already loaded stats; ensure badges update after all loads
   loadStats().then(()=>{ // update drawer badges after stats
     // also trigger loads for badge counts if not yet
@@ -119,6 +121,161 @@ function updateDrawerBadges(){
     if(da){ if(acc && acc!=='-' && acc.trim()!==''){ da.textContent=acc.trim(); da.style.display='inline-flex'; } else da.style.display='none'; }
     // Unreg and pwd counts are updated in their loaders, but also reflect here if needed
   }catch{}
+}
+
+function debounce(fn, ms=180){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
+function norm(s){ return (s||'').toString().toLowerCase(); }
+
+function filterCases(q){
+  const wrap = document.getElementById('victimsTableWrap');
+  if(!wrap) return;
+  const rows = wrap.querySelectorAll('tbody tr');
+  if(!rows.length) return;
+  const needle = norm(q).trim();
+  let visible=0;
+  rows.forEach(tr=>{
+    const hay = norm(tr.textContent);
+    const show = !needle || hay.includes(needle);
+    tr.style.display = show ? '' : 'none';
+    if(show) visible++;
+  });
+  const fc = document.getElementById('casesFilteredCount');
+  if(fc){
+    if(needle && rows.length){ fc.textContent = `${visible}/${rows.length} matches`; fc.style.display='inline'; }
+    else fc.style.display='none';
+  }
+  if(visible===0 && needle){
+    if(!wrap.querySelector('.no-search-match')){
+      const el=document.createElement('div'); el.className='hint no-search-match'; el.style.padding='12px'; el.textContent='No cases match "'+q+'"';
+      wrap.appendChild(el);
+    }
+  }else{
+    wrap.querySelector('.no-search-match')?.remove();
+  }
+}
+function filterAccounts(q){
+  const el = document.getElementById('accountsList');
+  if(!el) return;
+  const needle = norm(q).trim();
+  const rows = el.querySelectorAll('tbody tr');
+  if(!rows.length){
+    // fallback: if accounts rendered as table, hide via text filter on innerHTML? Already rows
+    // if no table yet, ignore
+    return;
+  }
+  let viss=0;
+  rows.forEach(tr=>{
+    const show = !needle || norm(tr.textContent).includes(needle);
+    tr.style.display = show ? '' : 'none';
+    if(show) viss++;
+  });
+  el.querySelector('.no-search-match')?.remove();
+  if(viss===0 && needle){
+    const d=document.createElement('div'); d.className='hint no-search-match'; d.style.padding='8px'; d.textContent='No accounts match "'+q+'"';
+    el.appendChild(d);
+  }
+}
+function filterAudit(q){
+  const el=document.getElementById('auditLog');
+  if(!el) return;
+  const needle=norm(q).trim();
+  const rows=el.querySelectorAll('div[style*="border-bottom"]');
+  if(!rows.length) return;
+  let v=0;
+  rows.forEach(r=>{
+    const show=!needle||norm(r.textContent).includes(needle);
+    r.style.display=show?'':'none';
+    if(show) v++;
+  });
+  el.querySelector('.no-search-match')?.remove();
+  if(v===0 && needle){
+    const d=document.createElement('div'); d.className='hint no-search-match'; d.style.padding='12px'; d.textContent='No audit entries match "'+q+'"';
+    el.appendChild(d);
+  }
+}
+function filterUnregistered(q){
+  const list=document.getElementById('unregisteredHospList');
+  if(!list) return;
+  const needle=norm(q).trim();
+  const cards=list.children;
+  let v=0;
+  Array.from(cards).forEach(c=>{
+    if(c.classList.contains('no-search-match')) return;
+    const show=!needle||norm(c.textContent).includes(needle);
+    c.style.display=show?'':'none';
+    if(show) v++;
+  });
+  list.querySelector('.no-search-match')?.remove();
+  if(v===0 && needle){
+    const d=document.createElement('div'); d.className='hint no-search-match'; d.style.padding='12px'; d.textContent='No hospitals match "'+q+'"';
+    list.appendChild(d);
+  }
+}
+function filterPwd(q){
+  const list=document.getElementById('pwdRequestsList');
+  if(!list) return;
+  const needle=norm(q).trim();
+  const cards=list.querySelectorAll('div[style*="border:1px solid"]');
+  if(!cards.length) return;
+  let v=0;
+  cards.forEach(c=>{
+    const show=!needle||norm(c.textContent).includes(needle);
+    c.style.display=show?'':'none';
+    if(show) v++;
+  });
+  list.querySelector('.no-search-match')?.remove();
+  if(v===0 && needle){
+    const d=document.createElement('div'); d.className='hint no-search-match'; d.style.padding='12px'; d.textContent='No requests match "'+q+'"';
+    list.appendChild(d);
+  }
+}
+function initAdminSearch(){
+  const global = document.getElementById('adminGlobalSearch');
+  const globalClear = document.getElementById('adminGlobalClear');
+  const per = {
+    cases: document.getElementById('searchCases'),
+    accounts: document.getElementById('searchAccounts'),
+    audit: document.getElementById('searchAudit'),
+    unregistered: document.getElementById('searchUnregistered'),
+    pwd: document.getElementById('searchPwd'),
+  };
+  const handlers = {
+    cases: debounce(v=>filterCases(v)),
+    accounts: debounce(v=>filterAccounts(v)),
+    audit: debounce(v=>filterAudit(v)),
+    unregistered: debounce(v=>filterUnregistered(v)),
+    pwd: debounce(v=>filterPwd(v)),
+  };
+  Object.entries(per).forEach(([k, input])=>{
+    if(!input) return;
+    input.addEventListener('input', ()=>{
+      const v=input.value;
+      handlers[k](v);
+      // sync global if user typed per-section
+      if(global && v) { /* keep global as is */ }
+    });
+    input.addEventListener('keydown', e=>{ if(e.key==='Escape'){ input.value=''; handlers[k](''); if(global){ global.value=''; globalClear.style.display='none'; } }});
+  });
+  if(global){
+    const runGlobal = debounce((val)=>{
+      const q=val.trim();
+      globalClear.style.display = q? 'inline-flex':'none';
+      // push to all per-section inputs and filter
+      Object.entries(per).forEach(([k, inp])=>{
+        if(inp){ inp.value = q; handlers[k](q); }
+      });
+      // Also directly filter current visible section if global typed
+      // Jump to first section with matches if needed — keep current section
+      if(q){
+        // find first section that has visible rows after filter — hint via drawer badge? just stay
+      }
+    }, 180);
+    global.addEventListener('input', ()=>runGlobal(global.value));
+    global.addEventListener('keydown', e=>{
+      if(e.key==='Escape'){ global.value=''; runGlobal(''); globalClear.style.display='none'; }
+    });
+    globalClear?.addEventListener('click', ()=>{ global.value=''; runGlobal(''); globalClear.style.display='none'; global.focus(); });
+  }
 }
 
 async function loadStats() {
@@ -175,6 +332,9 @@ async function loadVictims() {
     });
     html += '</tbody></table>';
     wrap.innerHTML = html;
+    // re-apply current search filter after render
+    const _q = document.getElementById('searchCases')?.value || document.getElementById('adminGlobalSearch')?.value || '';
+    if(_q) filterCases(_q);
   } catch (err) { wrap.innerHTML = `<p class="hint" style="padding:16px;">Error: ${err.message}</p>`; }
 }
 
@@ -209,6 +369,8 @@ async function loadUnregisteredHospitals() {
         </div>
       </div>
     `).join('');
+    const _qu = document.getElementById('searchUnregistered')?.value || document.getElementById('adminGlobalSearch')?.value || '';
+    if(_qu) filterUnregistered(_qu);
     // toast notification
     if (victims.length > 0 && !document.getElementById('unregToast')) {
       const toast = document.createElement('div');
@@ -378,6 +540,8 @@ async function loadAccounts() {
     });
     html += '</table>';
     el.innerHTML = html;
+    const _qa = document.getElementById('searchAccounts')?.value || document.getElementById('adminGlobalSearch')?.value || '';
+    if(_qa) filterAccounts(_qa);
   } catch (err) { el.innerHTML = `<p class="hint">Error: ${err.message}</p>`; }
 }
 
@@ -396,6 +560,8 @@ async function loadAuditLog() {
         ${l.victim_id ? `<span style="color:var(--gray-400);font-size:11px;">case #${l.victim_id}</span>` : ''}
       </div>`;
     }).join('');
+    const _qaud = document.getElementById('searchAudit')?.value || document.getElementById('adminGlobalSearch')?.value || '';
+    if(_qaud) filterAudit(_qaud);
   } catch (err) { el.innerHTML = `<p class="hint">Error: ${err.message}</p>`; }
 }
 
@@ -460,7 +626,9 @@ async function loadPasswordRequests(){
           <div class="hint" id="pwdMsg-${r.id}" style="font-size:11px;margin-top:4px;"></div>
         ` : `<div class="hint" style="font-size:11px;margin-top:6px;">Reviewed by ${r.reviewed_by||'-'}</div>`}
       </div>
-    `).join('');
+     `).join('');
+    const _qp = document.getElementById('searchPwd')?.value || document.getElementById('adminGlobalSearch')?.value || '';
+    if(_qp) filterPwd(_qp);
   }catch(e){ list.innerHTML=`<p class="hint">Error: ${e.message}</p>`; }
 }
 window.handlePwdApprove = async function(id){

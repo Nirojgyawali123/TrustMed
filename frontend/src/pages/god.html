@@ -48,6 +48,13 @@
   <div id="drawerOverlay" class="admin-drawer-overlay" aria-hidden="true"></div>
 
   <main id="adminMain" class="admin-main page" style="padding-top:16px;">
+    <div class="card" style="padding:10px 12px;margin-bottom:14px;display:flex;gap:8px;align-items:center;">
+      <div style="flex:1;position:relative;">
+        <input type="text" id="adminGlobalSearch" placeholder="Search everywhere: cases, accounts, hospitals..." aria-label="Global admin search" style="width:100%;padding:10px 12px 10px 36px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:14px;outline:none;">
+        <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:16px;height:16px;stroke:var(--gray-400);pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      </div>
+      <button id="adminGlobalClear" class="btn btn-ghost btn-sm" style="display:none;">Clear</button>
+    </div>
     <!-- Overview -->
     <section data-section="overview" id="sec-overview">
       <div style="padding:4px 0 14px;">
@@ -69,6 +76,7 @@
     <!-- All cases -->
     <section data-section="cases" id="sec-cases" hidden>
       <div class="section-head" style="margin-top:4px;"><h2>All cases</h2><span class="count" id="casesCount"></span></div>
+      <div class="search-row" style="max-width:480px;margin-bottom:12px;"><input type="text" id="searchCases" placeholder="Search cases by name, ID, hospital, municipality, disease..." aria-label="Search cases" style="flex:1;"><span id="casesFilteredCount" class="hint" style="font-size:12px;display:none;"></span></div>
       <div class="card" style="padding:0;overflow:auto;">
         <div id="victimsTableWrap" style="padding:0 4px 4px;"><p class="hint" style="padding:16px;">Loading...</p></div>
       </div>
@@ -77,6 +85,7 @@
     <!-- Accounts -->
     <section data-section="accounts" id="sec-accounts" hidden>
       <div class="section-head"><h2>All accounts</h2></div>
+      <div class="search-row" style="max-width:420px;margin-bottom:12px;"><input type="text" id="searchAccounts" placeholder="Search by username, name, role..." aria-label="Search accounts"></div>
       <div class="card" style="padding:20px;">
         <div id="accountsList"><p class="hint">Loading...</p></div>
       </div>
@@ -106,6 +115,7 @@
 
     <!-- Unregistered -->
     <section data-section="unregistered" id="sec-unregistered" hidden>
+      <div class="search-row" style="max-width:420px;margin-bottom:12px;"><input type="text" id="searchUnregistered" placeholder="Search hospitals by name, address, case..." aria-label="Search unregistered"></div>
       <div class="card" style="padding:20px;" id="unregisteredHospCard">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
           <div style="font-size:15px;font-weight:700;">Unregistered hospitals <span id="unregHospCount" class="pill amber" style="margin-left:6px;display:none;"></span></div>
@@ -128,6 +138,7 @@
 
     <!-- Password requests -->
     <section data-section="pwd" id="sec-pwd" hidden>
+      <div class="search-row" style="max-width:420px;margin-bottom:12px;"><input type="text" id="searchPwd" placeholder="Search by username, role, reason..." aria-label="Search password requests"></div>
       <div class="card" style="padding:20px;" id="pwdRequestsCard">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
           <div style="font-size:15px;font-weight:700;">Hospital / Municipality password requests</div>
@@ -140,6 +151,7 @@
 
     <!-- Audit -->
     <section data-section="audit" id="sec-audit" hidden>
+      <div class="search-row" style="max-width:480px;margin-bottom:12px;"><input type="text" id="searchAudit" placeholder="Search audit by actor, action, details..." aria-label="Search audit log"></div>
       <div class="card" style="padding:20px;">
         <div style="font-size:15px;font-weight:700;margin-bottom:14px;">Audit log (recent 100)</div>
         <div id="auditLog" style="font-size:12px;max-height:500px;overflow-y:auto;"><p class="hint">Loading...</p></div>
