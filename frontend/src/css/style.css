@@ -272,3 +272,76 @@ a:hover { text-decoration: underline; }
 }
 @media (min-width: 769px) { #adminDrawerToggle { display: none !important; } }
 .admin-shell .page { max-width: none; margin: 0; padding: 0 20px 32px; }
+
+/* — Mobile excellence (Instagram/Facebook craft): 360-430 no horizontal scroll, safe-area aware — */
+html, body { overflow-x: clip; max-width: 100vw; }
+.search-row input, .field input, .field textarea { min-width: 0; }
+
+/* Page + hero safe padding */
+@media (max-width: 640px) {
+  .page { padding: 0 16px 32px; padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+  .admin-shell .page { padding: 0 16px 24px; padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+  .hero { padding: 28px 16px 20px; padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+  .hero h1 { font-size: clamp(24px, 6vw, 30px); line-height: 1.15; max-width: 20ch; }
+  .hero p { font-size: 14px; line-height: 1.6; }
+  .trust-strip { padding: 0 16px; gap: 12px; margin: 20px auto; }
+  .trust-strip--center { padding: 0; }
+  .form-section { padding: 16px; }
+  .login-shell { padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+  .login-card { padding: 20px; border-radius: 14px; }
+  .modal-overlay { padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+  .modal { padding: 20px; max-width: min(420px, calc(100vw - 32px)); }
+}
+@media (max-width: 380px) {
+  .page, .admin-shell .page, .hero, .trust-strip { padding-left: 12px; padding-right: 12px; }
+  .page { padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); }
+}
+
+/* Topbar: Instagram-clean scroll, no horizontal page scroll */
+@media (max-width: 640px) {
+  .topbar { padding: 0 12px; gap: 8px; min-height: 56px; height: auto; padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); }
+  .brand { font-size: 15px; gap: 8px; }
+  .brand .mark { width: 26px; height: 26px; }
+  .nav { flex: 1 1 auto; min-width: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; gap: 2px; scroll-snap-type: x proximity; padding-bottom: 2px; }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav a { flex-shrink: 0; scroll-snap-align: start; padding: 6px 10px; font-size: 13px; }
+  .nav-right { gap: 6px; flex-shrink: 0; }
+  .nav-right .btn-sm { padding: 6px 10px; font-size: 12.5px; }
+  .brand .pill { font-size: 10px; padding: 2px 7px; }
+}
+
+/* Grids: never exceed viewport */
+.case-grid { grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr)); }
+@media (max-width: 380px) {
+  .case-grid { grid-template-columns: 1fr; gap: 12px; }
+}
+
+/* Admin create: stack on mobile (was 1fr 1fr inline) */
+@media (max-width: 640px) {
+  #sec-create > div[style*="grid-template-columns:1fr 1fr"] { grid-template-columns: 1fr !important; }
+  #sec-overview > div[style*="grid-template-columns:repeat"] { gap: 8px !important; }
+}
+
+/* Step indicator: Facebook-style — hide labels, keep numbers */
+@media (max-width: 640px) {
+  .step-indicator { gap: 4px; margin-bottom: 16px; }
+  .step { padding: 4px 6px; gap: 4px; }
+  .step-label { display: none; }
+  .step-connector { width: 12px; }
+  .step-progress { margin: 0 16px 12px; }
+  .step-progress-label { font-size: 11.5px; margin-bottom: 12px; }
+}
+
+/* Detail + queue safe */
+@media (max-width: 640px) {
+  .detail-panel .kv { flex-direction: column; align-items: flex-start; gap: 2px; padding: 7px 0; }
+  .detail-panel .kv .v { text-align: left; }
+  .queue-row { padding: 10px 12px; gap: 10px; }
+  .admin-drawer { width: 260px; max-width: 85vw; left: env(safe-area-inset-left, 0); }
+}
+
+/* Trust strip stacks nicely already flex-wrap, tighten on tiny */
+@media (max-width: 380px) {
+  .trust-item { font-size: 12px; }
+  .hero-actions .btn { flex: 1 1 auto; min-width: 0; justify-content: center; }
+}
