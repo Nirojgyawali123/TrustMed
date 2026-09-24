@@ -8,10 +8,13 @@ A medical crowdfunding platform where every case is **verified by the treating h
 
 | Layer | Technology |
 |-------|-----------|
-| Backend | Python 3, FastAPI, SQLAlchemy, SQLite |
-| Frontend | Vite, vanilla HTML/CSS/JS, Tailwind CSS |
-| Auth | Custom (username/password, admin headers via `X-Admin-User`/`X-Admin-Pass`) |
-| Assets | Static file uploads (medical reports, collector photos) |
+| Backend | Python 3, FastAPI, SQLAlchemy, SQLite, bcrypt, python-jose (JWT), fpdf2 |
+| Frontend | Vite, vanilla HTML/CSS/JS, Tailwind CSS v4 |
+| Auth | JWT Bearer Tokens, bcrypt password hashing, role-based route guards |
+| Assets | Static file uploads (enhanced medical reports, bank QR, compressed Gov ID <200KB, logos) |
+
+> [!NOTE]
+> **Complete System Workflows & Architecture Guide**: See [SYSTEM_WORKFLOWS_DOCUMENTATION.md](SYSTEM_WORKFLOWS_DOCUMENTATION.md) for full visual flowcharts, 5-step wizard details, security/privacy matrix, and role guides.
 
 ---
 

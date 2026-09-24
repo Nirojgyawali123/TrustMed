@@ -12,6 +12,8 @@ async function loadAll() {
   await loadUnregisteredHospitals();
   await loadAccounts();
   await loadAuditLog();
+  await loadEmailSettings();
+  await loadPasswordRequests();
 }
 
 async function loadStats() {
@@ -285,6 +287,85 @@ async function loadAuditLog() {
 
 document.getElementById('createHospBtn').addEventListener('click', () => createAccount('hospital'));
 document.getElementById('createMunBtn').addEventListener('click', () => createAccount('municipality'));
+
+async function loadEmailSettings(){
+  const inp = document.getElementById('smtpFromInput');
+  const msg = document.getElementById('smtpMsg');
+  if(!inp) return;
+  try{
+    const row = await adminAPI.getSetting('smtp_from_email');
+    inp.value = row.value || '';
+  }catch(e){
+    // try list
+    try{
+      const all = await adminAPI.listSettings();
+      const found = all.find(x=>x.key==='smtp_from_email');
+      if(found) inp.value = found.value||'';
+      else inp.placeholder='nirojgyawali45@gmail.com';
+    }catch(_){}
+  }
+  document.getElementById('saveSmtpBtn')?.addEventListener('click', async ()=>{
+    const val = inp.value.trim().toLowerCase();
+    const m = document.getElementById('smtpMsg');
+    if(!val || !val.includes('@')){ m.textContent='Enter valid Gmail.'; m.style.color='var(--danger)'; return;}
+    m.textContent='Saving...'; m.style.color='var(--gray-500)';
+    try{
+      await adminAPI.updateSetting('smtp_from_email', val);
+      m.textContent='Saved ✓'; m.style.color='var(--success)';
+    }catch(err){ m.textContent=err.message; m.style.color='var(--danger)';}
+  });
+}
+
+async function loadPasswordRequests(){
+  const list = document.getElementById('pwdRequestsList');
+  const cnt = document.getElementById('pwdReqCount');
+  if(!list) return;
+  try{
+    const reqs = await adminAPI.listPasswordRequests();
+    if(reqs.length===0){ list.innerHTML='<p class="hint">No pending requests.</p>'; if(cnt) cnt.style.display='none'; return; }
+    const pending = reqs.filter(r=>r.status==='pending');
+    if(cnt){ cnt.textContent = pending.length+' pending'; cnt.style.display = pending.length?'inline-flex':'none'; }
+    list.innerHTML = reqs.map(r=>`
+      <div style="border:1px solid var(--gray-200);border-radius:8px;padding:10px;margin-bottom:8px;background:${r.status==='pending'?'#fffbeb':'#fff'};">
+        <div style="display:flex;justify-content:space-between;gap:8px;">
+          <div><strong style="font-size:13px;">${r.username}</strong> <span class="pill ${r.role==='hospital'?'green':'amber'}" style="font-size:10px;">${r.role}</span> <span class="pill ${r.status==='pending'?'amber':r.status==='approved'?'green':'red'}" style="font-size:10px;">${r.status}</span></div>
+          <span class="hint" style="font-size:11px;">${new Date(r.requested_at).toLocaleString()}</span>
+        </div>
+        ${r.reason? `<div style="margin-top:6px;font-size:12.5px;background:var(--gray-50);padding:6px 8px;border-radius:6px;">${r.reason}</div>`:''}
+        ${r.status==='pending'? `
+          <div style="display:flex;gap:6px;margin-top:8px;">
+            <button class="btn btn-green btn-sm" onclick="handlePwdApprove(${r.id})">Approve</button>
+            <button class="btn btn-danger btn-sm" onclick="handlePwdReject(${r.id})">Reject</button>
+          </div>` : r.status==='approved'? `
+          <div style="display:flex;gap:6px;margin-top:8px;align-items:center;">
+            <input type="text" placeholder="New password" id="pwdNew-${r.id}" style="flex:1;padding:7px 10px;border:1.5px solid var(--gray-200);border-radius:7px;font-size:13px;">
+            <button class="btn btn-primary btn-sm" onclick="handlePwdReset(${r.id})">Set password</button>
+          </div>
+          <div class="hint" id="pwdMsg-${r.id}" style="font-size:11px;margin-top:4px;"></div>
+        ` : `<div class="hint" style="font-size:11px;margin-top:6px;">Reviewed by ${r.reviewed_by||'-'}</div>`}
+      </div>
+    `).join('');
+  }catch(e){ list.innerHTML=`<p class="hint">Error: ${e.message}</p>`; }
+}
+window.handlePwdApprove = async function(id){
+  try{ await adminAPI.approvePasswordRequest(id); await loadPasswordRequests(); }catch(e){ alert(e.message); }
+};
+window.handlePwdReject = async function(id){
+  const reason = prompt('Reject reason (optional):')||'';
+  try{ await adminAPI.rejectPasswordRequest(id); await loadPasswordRequests(); }catch(e){ alert(e.message); }
+};
+window.handlePwdReset = async function(id){
+  const inp = document.getElementById(`pwdNew-${id}`);
+  const msg = document.getElementById(`pwdMsg-${id}`);
+  const pwd = inp.value.trim();
+  if(pwd.length<4){ msg.textContent='Min 4 chars'; msg.style.color='var(--danger)'; return; }
+  msg.textContent='Setting...'; msg.style.color='var(--gray-500)';
+  try{
+    const res = await adminAPI.resetPasswordForRequest(id, pwd);
+    msg.textContent=res.detail||'Updated ✓'; msg.style.color='var(--success)';
+    inp.value='';
+  }catch(e){ msg.textContent=e.message; msg.style.color='var(--danger)'; }
+};
 
 document.getElementById('confirmUnregHospBtn')?.addEventListener('click', async () => {
   if (!pendingUnregId) return;

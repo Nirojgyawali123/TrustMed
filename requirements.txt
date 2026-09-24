@@ -8,3 +8,4 @@ python-jose[cryptography]
 fpdf2
 qrcode[pil]
 python-dotenv
+email-validator

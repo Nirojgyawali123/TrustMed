@@ -1,11 +1,14 @@
 import os
 import io
+import re
 import uuid
 import shutil
 import time
+import hashlib
+import secrets
 from collections import defaultdict
 from datetime import datetime, timedelta
-from fastapi import FastAPI, Depends, HTTPException, Header, UploadFile, File, Query, Request
+from fastapi import FastAPI, Depends, HTTPException, Header, UploadFile, File, Query, Request, BackgroundTasks
 from fastapi.responses import Response, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -16,7 +19,53 @@ from jose import JWTError, jwt
 import bcrypt
 
 from backend import crud, models, schemas, database, pdf as pdfgen
-from backend.config import JWT_SECRET, JWT_ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
+from backend.config import JWT_SECRET, JWT_ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, OTP_EXPIRE_MINUTES, OTP_MAX_ATTEMPTS, OTP_RESEND_COOLDOWN_SECONDS
+from backend.email import send_otp_email, _get_sender_email
+
+# ──────────────────────────────────────────
+# Helpers: normalization & OTP hashing (address decision = normalized exact)
+# ──────────────────────────────────────────
+
+def _normalize_text(s: str) -> str:
+    if not s:
+        return ""
+    s = re.sub(r"[,\.\-\_\/]+", " ", s)
+    s = s.strip().lower()
+    s = re.sub(r"\s+", " ", s)
+    return s
+
+def _normalize_address(s: str) -> str:
+    return _normalize_text(s)
+
+def _normalize_phone(s: str) -> str:
+    if not s:
+        return ""
+    # keep only digits for comparison; handles 98XXXXXXXX vs 98xx-xx-xx
+    return re.sub(r"\D", "", s.strip())
+
+def _normalize_email(s: str) -> str:
+    if not s:
+        return ""
+    return s.strip().lower()
+
+def _hash_otp(otp: str) -> str:
+    return hashlib.sha256(otp.encode("utf-8")).hexdigest()
+
+def _get_account_phone_plain(account: models.Account) -> str:
+    """Account.phone is now plaintext String, but old rows may be Fernet ciphertext.
+    Try to decrypt if needed."""
+    raw = account.phone or ""
+    if not raw:
+        return ""
+    if raw.startswith("gAAAAA"):
+        try:
+            from backend.crypto import decrypt as _dec
+            dec = _dec(raw)
+            if dec and dec != raw:
+                return dec
+        except Exception:
+            pass
+    return raw
 
 # Pillow for image compression / enhancement (already via qrcode[pil])
 try:
@@ -352,6 +401,8 @@ def _can_view_citizenship(victim: models.Victim, account: models.Account) -> boo
 
 models.Base.metadata.create_all(bind=database.engine)
 database.migrate_schema()
+database._ensure_indexes_and_seed_settings()
+database._migrate_phone_decrypt()
 database.seed_admin()
 
 backend = FastAPI(title="TrustMed API")
@@ -456,6 +507,23 @@ def signup(req: schemas.PatientSignupRequest, db: Session = Depends(database.get
     existing_cit = db.query(models.Account).filter(models.Account.citizenship == req.citizenship).first()
     if existing_cit:
         raise HTTPException(status_code=400, detail="Citizenship number already registered")
+    # phone and email uniqueness (primary keys per D2)
+    if req.phone:
+        existing_phone = db.query(models.Account).filter(models.Account.phone == req.phone.strip()).first()
+        if existing_phone:
+            raise HTTPException(status_code=400, detail="Phone number already registered")
+        # also check decrypted legacy phones — fallback scan for old ciphertext rows
+        # (light check)
+        all_with_phone = db.query(models.Account).all()
+        norm_new = _normalize_phone(req.phone)
+        for acc in all_with_phone:
+            if _normalize_phone(_get_account_phone_plain(acc)) == norm_new and norm_new:
+                raise HTTPException(status_code=400, detail="Phone number already registered")
+    if req.email:
+        norm_email = _normalize_email(str(req.email))
+        existing_email = db.query(models.Account).filter(models.Account.email == norm_email).first()
+        if existing_email:
+            raise HTTPException(status_code=400, detail="Gmail already registered")
     hashed = bcrypt.hashpw(req.password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
     account = models.Account(
         username=req.username,
@@ -464,8 +532,9 @@ def signup(req: schemas.PatientSignupRequest, db: Session = Depends(database.get
         full_name=req.full_name,
         dob=req.dob,
         address=req.address,
-        phone=req.phone,
-        citizenship=req.citizenship,
+        phone=req.phone.strip(),
+        citizenship=req.citizenship.strip(),
+        email=_normalize_email(str(req.email)),
     )
     db.add(account)
     db.commit()
@@ -481,6 +550,230 @@ def auth_me(account: models.Account = Depends(get_current_user)):
 
 
 # ──────────────────────────────────────────
+# Forgot password via Gmail OTP (patient only) — 5-field verification
+# ──────────────────────────────────────────
+
+@backend.post("/auth/forgot/request")
+def forgot_request(req: schemas.ForgotRequest, background_tasks: BackgroundTasks, db: Session = Depends(database.get_db), _: bool = Depends(rate_limit(5))):
+    # Normalize inputs
+    full_name_in = _normalize_text(req.full_name)
+    phone_in = _normalize_phone(req.phone)
+    citizenship_in = (req.citizenship or "").strip()
+    email_in = _normalize_email(str(req.email))
+    address_in = _normalize_address(req.address)
+
+    # Lookup by citizenship (indexed unique) — primary key per D2
+    acct = db.query(models.Account).filter(models.Account.citizenship == citizenship_in).first()
+    if not acct:
+        raise HTTPException(status_code=400, detail="Details do not match. Please check your information.")
+
+    # Role guard: only patients
+    if acct.role != "patient":
+        raise HTTPException(status_code=403, detail="Hospitals and municipalities must request admin to change password.")
+
+    # Verify 5 fields (normalized)
+    acct_name_norm = _normalize_text(acct.full_name or "")
+    acct_phone_norm = _normalize_phone(_get_account_phone_plain(acct))
+    acct_cit = (acct.citizenship or "").strip()
+    acct_email_norm = _normalize_email(acct.email or "")
+    acct_addr_norm = _normalize_address(acct.address or "")
+
+    if not (
+        acct_name_norm == full_name_in
+        and acct_phone_norm == phone_in
+        and acct_cit == citizenship_in
+        and acct_email_norm == email_in
+        and acct_addr_norm == address_in
+    ):
+        crud.log_action(db, "password_reset_failed_5field", acct.username, acct.role, details=f"Forgot 5-field mismatch for {email_in}")
+        raise HTTPException(status_code=400, detail="Details do not match. Please check your information.")
+
+    # Resend cooldown 60s
+    recent = db.query(models.PasswordResetOTP).filter(
+        models.PasswordResetOTP.account_id == acct.id,
+        models.PasswordResetOTP.created_at > datetime.utcnow() - timedelta(seconds=OTP_RESEND_COOLDOWN_SECONDS),
+        models.PasswordResetOTP.used == False,
+    ).order_by(models.PasswordResetOTP.created_at.desc()).first()
+    if recent:
+        remaining = int((recent.created_at + timedelta(seconds=OTP_RESEND_COOLDOWN_SECONDS) - datetime.utcnow()).total_seconds())
+        remaining = max(1, remaining)
+        raise HTTPException(status_code=429, detail=f"Please wait {remaining} seconds before resending.")
+
+    # Generate OTP 6-digit
+    otp = f"{secrets.randbelow(900000) + 100000:06d}"
+    otp_hash = _hash_otp(otp)
+    expires = datetime.utcnow() + timedelta(minutes=OTP_EXPIRE_MINUTES)
+    entry = models.PasswordResetOTP(
+        account_id=acct.id,
+        email=email_in,
+        otp_hash=otp_hash,
+        expires_at=expires,
+        attempts=0,
+        verified=False,
+        used=False,
+    )
+    db.add(entry)
+    db.commit()
+
+    # Send email via background task
+    background_tasks.add_task(send_otp_email, email_in, otp, db)
+    # Also direct fallback log if no SMTP (send_otp_email will log)
+    # For dev immediacy, call inline as well if BackgroundTasks timing issues? Background handles.
+
+    crud.log_action(db, "password_reset_requested", acct.username, acct.role, details=f"OTP sent to {email_in}")
+
+    # In dev mode where SMTP not configured, include hint (remove in prod)
+    dev_hint = None
+    import os as _os
+    if not (_os.getenv("SMTP_USER") or "") or not (_os.getenv("SMTP_PASS") or ""):
+        dev_hint = f"Dev mode: OTP is {otp} (check server console)"
+
+    resp = {"detail": "If details matched, an OTP was sent to your Gmail.", "expires_in_minutes": OTP_EXPIRE_MINUTES}
+    if dev_hint:
+        resp["dev_otp"] = otp
+        resp["dev_hint"] = dev_hint
+    return resp
+
+
+@backend.post("/auth/forgot/verify")
+def forgot_verify(req: schemas.ForgotVerify, db: Session = Depends(database.get_db), _: bool = Depends(rate_limit(10))):
+    email_norm = _normalize_email(str(req.email))
+    otp_in = (req.otp or "").strip()
+
+    # Find latest unused OTP for this email
+    entry = db.query(models.PasswordResetOTP).filter(
+        models.PasswordResetOTP.email == email_norm,
+        models.PasswordResetOTP.used == False,
+    ).order_by(models.PasswordResetOTP.created_at.desc()).first()
+
+    if not entry:
+        raise HTTPException(status_code=400, detail="Invalid or expired OTP. Please request a new one.")
+
+    # Check expiry
+    if datetime.utcnow() > entry.expires_at:
+        entry.used = True
+        db.commit()
+        raise HTTPException(status_code=400, detail="OTP expired. Please request a new one.")
+
+    # Check attempts
+    if entry.attempts >= OTP_MAX_ATTEMPTS:
+        entry.used = True
+        db.commit()
+        raise HTTPException(status_code=400, detail="Too many attempts. Please request a new OTP.")
+
+    # Verify hash
+    if _hash_otp(otp_in) != entry.otp_hash:
+        entry.attempts += 1
+        if entry.attempts >= OTP_MAX_ATTEMPTS:
+            entry.used = True
+        db.commit()
+        remaining = OTP_MAX_ATTEMPTS - entry.attempts
+        if remaining <= 0:
+            raise HTTPException(status_code=400, detail="Invalid OTP. No attempts left. Please request a new one.")
+        raise HTTPException(status_code=400, detail=f"Invalid OTP. {remaining} attempt(s) left.")
+
+    # Success
+    entry.verified = True
+    # Do not mark used yet — reset will mark used
+    db.commit()
+
+    # Issue reset token (short-lived 10m)
+    acct = db.query(models.Account).filter(models.Account.id == entry.account_id).first()
+    if not acct:
+        raise HTTPException(status_code=404, detail="Account not found")
+    if acct.role != "patient":
+        raise HTTPException(status_code=403, detail="Not a patient account")
+
+    token = jwt.encode({"sub": str(acct.id), "purpose": "pwd_reset", "exp": datetime.utcnow() + timedelta(minutes=10)}, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    crud.log_action(db, "otp_verified", acct.username, acct.role, details=f"OTP verified for {email_norm}")
+    return {"detail": "OTP verified", "reset_token": token, "email": email_norm}
+
+
+@backend.post("/auth/forgot/reset")
+def forgot_reset(req: schemas.ForgotResetWithToken, db: Session = Depends(database.get_db), _: bool = Depends(rate_limit(10))):
+    # Verify token
+    try:
+        payload = jwt.decode(req.reset_token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        if payload.get("purpose") != "pwd_reset":
+            raise HTTPException(status_code=400, detail="Invalid reset token")
+        sub = payload.get("sub")
+        if sub is None:
+            raise HTTPException(status_code=400, detail="Invalid token")
+        account_id = int(sub)
+    except JWTError:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+
+    if not req.new_password or len(req.new_password) < 4:
+        raise HTTPException(status_code=400, detail="Password must be at least 4 characters")
+
+    acct = db.query(models.Account).filter(models.Account.id == account_id).first()
+    if not acct or acct.role != "patient":
+        raise HTTPException(status_code=404, detail="Account not found or not a patient")
+
+    # Hash new password
+    hashed = bcrypt.hashpw(req.new_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    acct.password = hashed
+    # Invalidate OTPs for this account
+    db.query(models.PasswordResetOTP).filter(models.PasswordResetOTP.account_id == acct.id, models.PasswordResetOTP.used == False).update({models.PasswordResetOTP.used: True})
+    db.commit()
+    crud.log_action(db, "password_reset", acct.username, acct.role, details="Password reset via OTP")
+    return {"detail": "Password updated successfully. Please login with new password."}
+
+
+@backend.post("/auth/forgot/reset-with-otp")
+def forgot_reset_with_otp(req: schemas.ForgotReset, db: Session = Depends(database.get_db), _: bool = Depends(rate_limit(10))):
+    """Alternative flow: email+otp+new_password in one call (no token). Keeps compatibility."""
+    email_norm = _normalize_email(str(req.email))
+    otp_in = (req.otp or "").strip()
+    if len(req.new_password) < 4:
+        raise HTTPException(status_code=400, detail="Password must be at least 4 characters")
+    entry = db.query(models.PasswordResetOTP).filter(
+        models.PasswordResetOTP.email == email_norm,
+        models.PasswordResetOTP.used == False,
+        models.PasswordResetOTP.verified == True,
+    ).order_by(models.PasswordResetOTP.created_at.desc()).first()
+    # If not verified before, try direct verify now (allow single-step)
+    if not entry:
+        entry = db.query(models.PasswordResetOTP).filter(
+            models.PasswordResetOTP.email == email_norm,
+            models.PasswordResetOTP.used == False,
+        ).order_by(models.PasswordResetOTP.created_at.desc()).first()
+        if not entry:
+            raise HTTPException(status_code=400, detail="No OTP found. Please request one.")
+        if datetime.utcnow() > entry.expires_at:
+            entry.used = True
+            db.commit()
+            raise HTTPException(status_code=400, detail="OTP expired.")
+        if entry.attempts >= OTP_MAX_ATTEMPTS:
+            entry.used = True
+            db.commit()
+            raise HTTPException(status_code=400, detail="Too many attempts.")
+        if _hash_otp(otp_in) != entry.otp_hash:
+            entry.attempts += 1
+            if entry.attempts >= OTP_MAX_ATTEMPTS:
+                entry.used = True
+            db.commit()
+            raise HTTPException(status_code=400, detail="Invalid OTP.")
+        entry.verified = True
+        db.commit()
+
+    # Now entry is verified
+    if _hash_otp(otp_in) != entry.otp_hash:
+        raise HTTPException(status_code=400, detail="Invalid OTP.")
+
+    acct = db.query(models.Account).filter(models.Account.id == entry.account_id).first()
+    if not acct or acct.role != "patient":
+        raise HTTPException(status_code=404, detail="Account not found")
+
+    hashed = bcrypt.hashpw(req.new_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    acct.password = hashed
+    entry.used = True
+    db.commit()
+    crud.log_action(db, "password_reset", acct.username, acct.role, details="Password reset via OTP direct")
+    return {"detail": "Password updated successfully."}
+
+
+# ──────────────────────────────────────────
 # Admin endpoints
 # ──────────────────────────────────────────
 
@@ -491,14 +784,160 @@ def admin_create_account(req: schemas.AdminCreateRequest, db: Session = Depends(
     existing = db.query(models.Account).filter(models.Account.username == req.username).first()
     if existing:
         raise HTTPException(status_code=400, detail="Username already taken")
+    # uniqueness for phone/citizenship/email if provided
+    if req.citizenship:
+        if db.query(models.Account).filter(models.Account.citizenship == req.citizenship.strip()).first():
+            raise HTTPException(status_code=400, detail="Citizenship already registered")
+    if req.phone:
+        norm_phone = _normalize_phone(req.phone)
+        # check existing normalized
+        for acc in db.query(models.Account).all():
+            if _normalize_phone(_get_account_phone_plain(acc)) == norm_phone and norm_phone:
+                raise HTTPException(status_code=400, detail="Phone already registered")
+    if req.email:
+        norm_email = _normalize_email(str(req.email))
+        if db.query(models.Account).filter(models.Account.email == norm_email).first():
+            raise HTTPException(status_code=400, detail="Email already registered")
     hashed = bcrypt.hashpw(req.password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
-    account = models.Account(username=req.username, password=hashed, role=req.role, full_name=req.full_name)
+    account = models.Account(
+        username=req.username,
+        password=hashed,
+        role=req.role,
+        full_name=req.full_name,
+        email=_normalize_email(str(req.email)) if req.email else None,
+        phone=(req.phone.strip() if req.phone else None),
+        citizenship=(req.citizenship.strip() if req.citizenship else None),
+        address=(req.address.strip() if req.address else None),
+    )
     db.add(account)
     db.commit()
     db.refresh(account)
     token = create_access_token({"sub": str(account.id), "username": account.username, "role": account.role})
     crud.log_action(db, "account_created", admin.username, "admin", details=f"Created {req.role} account: {req.username}")
     return schemas.LoginResponse(id=account.id, username=account.username, role=account.role, access_token=token)
+
+
+# ──────────────────────────────────────────
+# Hospital / Municipality password change request (patient direct OTP, others via admin)
+# ──────────────────────────────────────────
+
+@backend.post("/auth/request-password-change", response_model=schemas.PasswordChangeRequestResponse)
+def request_password_change(req: schemas.PasswordChangeRequestCreate, db: Session = Depends(database.get_db), account: models.Account = Depends(get_current_user)):
+    if account.role not in ["hospital", "municipality"]:
+        raise HTTPException(status_code=403, detail="Only hospital and municipality accounts use this flow. Patients use Forgot Password.")
+    # prevent duplicate pending
+    existing = db.query(models.PasswordChangeRequest).filter(
+        models.PasswordChangeRequest.account_id == account.id,
+        models.PasswordChangeRequest.status == "pending",
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="You already have a pending request. Please wait for admin review.")
+    pr = models.PasswordChangeRequest(
+        account_id=account.id,
+        username=account.username,
+        role=account.role,
+        status="pending",
+        reason=req.reason,
+    )
+    db.add(pr)
+    db.commit()
+    db.refresh(pr)
+    crud.log_action(db, "password_change_requested", account.username, account.role, details=f"Request: {req.reason or ''}")
+    return pr
+
+
+@backend.get("/admin/password-requests", response_model=list[schemas.PasswordChangeRequestResponse])
+def list_password_requests(db: Session = Depends(database.get_db), admin: models.Account = Depends(require_role("admin"))):
+    return db.query(models.PasswordChangeRequest).order_by(models.PasswordChangeRequest.requested_at.desc()).all()
+
+
+@backend.patch("/admin/password-requests/{req_id}/approve")
+def approve_password_request(req_id: int, db: Session = Depends(database.get_db), admin: models.Account = Depends(require_role("admin"))):
+    pr = db.query(models.PasswordChangeRequest).filter(models.PasswordChangeRequest.id == req_id).first()
+    if not pr:
+        raise HTTPException(status_code=404, detail="Request not found")
+    if pr.status != "pending":
+        raise HTTPException(status_code=400, detail=f"Already {pr.status}")
+    pr.status = "approved"
+    pr.reviewed_by = admin.username
+    pr.reviewed_at = datetime.utcnow()
+    db.commit()
+    crud.log_action(db, "password_change_approved", admin.username, "admin", details=f"Approved {pr.username} ({pr.role})")
+    return {"detail": f"Approved. {pr.username} can now use admin-set password flow. Tell them to contact admin for new password."}
+
+
+@backend.patch("/admin/password-requests/{req_id}/reject")
+def reject_password_request(req_id: int, reason: Optional[str] = None, db: Session = Depends(database.get_db), admin: models.Account = Depends(require_role("admin"))):
+    pr = db.query(models.PasswordChangeRequest).filter(models.PasswordChangeRequest.id == req_id).first()
+    if not pr:
+        raise HTTPException(status_code=404, detail="Request not found")
+    if pr.status != "pending":
+        raise HTTPException(status_code=400, detail=f"Already {pr.status}")
+    pr.status = "rejected"
+    pr.reviewed_by = admin.username
+    pr.reviewed_at = datetime.utcnow()
+    pr.details = reason
+    db.commit()
+    crud.log_action(db, "password_change_rejected", admin.username, "admin", details=f"Rejected {pr.username}: {reason or ''}")
+    return {"detail": "Rejected"}
+
+
+@backend.post("/admin/password-requests/{req_id}/reset-password")
+def admin_reset_user_password(req_id: int, new_password: str = Query(..., min_length=4), db: Session = Depends(database.get_db), admin: models.Account = Depends(require_role("admin"))):
+    """Admin directly sets new password after approving request."""
+    pr = db.query(models.PasswordChangeRequest).filter(models.PasswordChangeRequest.id == req_id).first()
+    if not pr:
+        raise HTTPException(status_code=404, detail="Request not found")
+    if pr.status != "approved":
+        raise HTTPException(status_code=400, detail="Request not yet approved. Approve first.")
+    acct = db.query(models.Account).filter(models.Account.id == pr.account_id).first()
+    if not acct:
+        raise HTTPException(status_code=404, detail="Account not found")
+    hashed = bcrypt.hashpw(new_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    acct.password = hashed
+    pr.details = f"Password reset by {admin.username} at {datetime.utcnow().isoformat()}"
+    db.commit()
+    crud.log_action(db, "password_reset_by_admin", admin.username, "admin", details=f"Reset password for {acct.username} ({acct.role})")
+    return {"detail": f"Password for {acct.username} updated"}
+
+
+# ──────────────────────────────────────────
+# Admin Settings — Gmail sender
+# ──────────────────────────────────────────
+
+@backend.get("/admin/settings", response_model=list[schemas.AppSettingsResponse])
+def list_settings(db: Session = Depends(database.get_db), admin: models.Account = Depends(require_role("admin"))):
+    return db.query(models.AppSettings).all()
+
+
+@backend.get("/admin/settings/{key}", response_model=schemas.AppSettingsResponse)
+def get_setting(key: str, db: Session = Depends(database.get_db), admin: models.Account = Depends(require_role("admin"))):
+    row = db.query(models.AppSettings).filter(models.AppSettings.key == key).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Setting not found")
+    return row
+
+
+@backend.put("/admin/settings/{key}", response_model=schemas.AppSettingsResponse)
+def update_setting(key: str, body: schemas.AppSettingsUpdate, db: Session = Depends(database.get_db), admin: models.Account = Depends(require_role("admin"))):
+    # Validate email keys
+    if "email" in key.lower():
+        val = body.value.strip().lower()
+        if "@" not in val or "." not in val:
+            raise HTTPException(status_code=400, detail="Invalid email")
+        body.value = val
+    row = db.query(models.AppSettings).filter(models.AppSettings.key == key).first()
+    if not row:
+        row = models.AppSettings(key=key, value=body.value, updated_by=admin.username)
+        db.add(row)
+    else:
+        row.value = body.value
+        row.updated_by = admin.username
+        row.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(row)
+    crud.log_action(db, "setting_updated", admin.username, "admin", details=f"{key} = {body.value}")
+    return row
 
 
 @backend.get("/admin/accounts", response_model=list[schemas.AccountResponse])

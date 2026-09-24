@@ -1,4 +1,4 @@
-import { victimsAPI, getUser } from '/src/api.js';
+import { victimsAPI, getUser, authAPI } from '/src/api.js';
 
 const user = getUser();
 if (!user || (user.role !== 'hospital' && user.role !== 'admin')) {
@@ -189,5 +189,18 @@ window.handleLogoUpload = async function(e) {
   }
   e.target.value = '';
 };
+
+document.getElementById('reqPwdBtn')?.addEventListener('click', async ()=>{
+  const reason = prompt('Reason for password change request (optional):') ?? '';
+  const hint = document.getElementById('pwdReqHint');
+  if(hint){ hint.style.display='block'; hint.textContent='Sending request...'; hint.style.color='var(--gray-500)'; }
+  try{
+    await authAPI.requestPasswordChange(reason);
+    if(hint){ hint.textContent='Request sent to admin. Wait for approval.'; hint.style.color='var(--success)'; }
+  }catch(err){
+    if(hint){ hint.textContent=err.message; hint.style.color='var(--danger)'; }
+    else alert(err.message);
+  }
+});
 
 load();

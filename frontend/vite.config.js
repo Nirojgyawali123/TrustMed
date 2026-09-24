@@ -23,6 +23,7 @@ export default defineConfig({
         submit: resolve(__dirname, 'src/pages/submit.html'),
         login: resolve(__dirname, 'src/pages/login.html'),
         signup: resolve(__dirname, 'src/pages/signup.html'),
+        forgot: resolve(__dirname, 'src/pages/forgot.html'),
         hospital: resolve(__dirname, 'src/pages/hospital.html'),
         municipality: resolve(__dirname, 'src/pages/municipality.html'),
         god: resolve(__dirname, 'src/pages/god.html'),

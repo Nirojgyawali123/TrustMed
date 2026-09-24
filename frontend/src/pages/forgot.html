@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TrustMed - Forgot Password</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+<style>
+  .otp-box{font-size:28px;letter-spacing:8px;text-align:center;font-weight:800;padding:14px;border:1.5px solid var(--gray-200);border-radius:8px;width:100%;}
+  .step-wrap{display:flex;gap:8px;justify-content:center;margin:16px 0 20px;}
+  .step-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:var(--gray-200);color:var(--gray-600);}
+  .step-dot.active{background:var(--primary);color:#fff;}
+  .step-dot.done{background:var(--success);color:#fff;}
+  .resend-row{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:13px;}
+  .countdown{color:var(--gray-500);}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="brand">
+    <span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2"><path d="M12 2 4 5v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V5l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg></span>
+    <span>TrustMed</span>
+  </div>
+  <div class="nav">
+    <a href="index.html">Home</a>
+    <a href="cases.html">Browse Cases</a>
+  </div>
+</div>
+<script type="module" src="../js/topbar.js"></script>
+<div class="login-shell">
+  <div class="login-card" style="max-width:520px;">
+    <h1>Forgot password</h1>
+    <p class="sub" id="stepSub">Enter your details to receive an OTP via Gmail.</p>
+
+    <div class="step-wrap">
+      <span class="step-dot active" id="dot1">1</span>
+      <span class="step-dot" id="dot2">2</span>
+      <span class="step-dot" id="dot3">3</span>
+    </div>
+
+    <!-- Step 1: 5-field verification -->
+    <div id="step1">
+      <div class="field">
+        <label>Full name <span class="required">*</span></label>
+        <input type="text" id="fpName" placeholder="Enter full name as registered">
+      </div>
+      <div class="field-row2">
+        <div class="field">
+          <label>Phone number <span class="required">*</span></label>
+          <input type="tel" id="fpPhone" placeholder="98XXXXXXXX">
+        </div>
+        <div class="field">
+          <label>Gmail <span class="required">*</span></label>
+          <input type="email" id="fpEmail" placeholder="your@gmail.com">
+        </div>
+      </div>
+      <div class="field">
+        <label>Citizenship number <span class="required">*</span></label>
+        <input type="text" id="fpCit" placeholder="Enter citizenship number">
+      </div>
+      <div class="field">
+        <label>Address <span class="required">*</span></label>
+        <input type="text" id="fpAddr" placeholder="Enter address as registered">
+        <div class="hint" style="margin-top:4px;">Must match exactly (punctuation ignored, e.g. Butwal-11 = Butwal 11)</div>
+      </div>
+      <div id="fpStatus1" class="hint" style="margin-bottom:12px;text-align:center;min-height:18px;"></div>
+      <button type="button" class="btn btn-primary btn-block" id="fpBtn1">Send OTP to Gmail</button>
+      <div style="margin-top:12px;text-align:center;font-size:13px;"><a href="login.html">Back to login</a></div>
+    </div>
+
+    <!-- Step 2: OTP verify -->
+    <div id="step2" style="display:none;">
+      <div class="field">
+        <label>Enter 6-digit OTP <span class="required">*</span></label>
+        <input type="text" id="fpOtp" maxlength="6" class="otp-box" placeholder="------" inputmode="numeric" autocomplete="one-time-code">
+        <div class="hint" style="margin-top:6px;text-align:center;">Sent to <span id="fpEmailShow"></span>. Expires in 3 minutes. Check spam.</div>
+      </div>
+      <div class="resend-row">
+        <button type="button" class="btn btn-ghost btn-sm" id="fpResend">Resend OTP</button>
+        <span class="countdown" id="fpCountdown">60s</span>
+      </div>
+      <div id="fpStatus2" class="hint" style="margin:12px 0;text-align:center;min-height:18px;"></div>
+      <button type="button" class="btn btn-primary btn-block" id="fpBtn2">Verify OTP</button>
+      <div style="margin-top:12px;text-align:center;font-size:13px;"><a href="#" id="fpBack1">Back</a></div>
+    </div>
+
+    <!-- Step 3: New password -->
+    <div id="step3" style="display:none;">
+      <div class="field">
+        <label>New password <span class="required">*</span></label>
+        <input type="password" id="fpNew" placeholder="At least 4 characters">
+      </div>
+      <div class="field">
+        <label>Confirm new password <span class="required">*</span></label>
+        <input type="password" id="fpConfirm" placeholder="Again">
+      </div>
+      <div id="fpStatus3" class="hint" style="margin-bottom:12px;text-align:center;min-height:18px;"></div>
+      <button type="button" class="btn btn-primary btn-block" id="fpBtn3">Reset password</button>
+      <div style="margin-top:12px;text-align:center;font-size:13px;"><a href="login.html">Back to login</a></div>
+    </div>
+
+    <div id="fpStatusOk" class="hint" style="margin-top:16px;text-align:center;color:var(--success);font-weight:600;display:none;"></div>
+  </div>
+</div>
+<script type="module" src="../js/forgot.js"></script>
+</body>
+</html>

@@ -24,11 +24,15 @@
 </div>
 <script type="module" src="../js/topbar.js"></script>
 
-<div class="page">
-  <div style="padding:20px 0 14px;">
-    <h1 class="page-title">Verify medical cases</h1>
-    <p class="page-sub">Review patient reports and confirm the diagnosis. Verified cases move to the municipality for identity clearance.</p>
+  <div class="page">
+  <div style="padding:20px 0 14px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+    <div>
+      <h1 class="page-title">Verify medical cases</h1>
+      <p class="page-sub">Review patient reports and confirm the diagnosis. Verified cases move to the municipality for identity clearance.</p>
+    </div>
+    <button type="button" class="btn btn-outline btn-sm" id="reqPwdBtn" style="margin-top:6px;">Request password change</button>
   </div>
+  <div id="pwdReqHint" class="hint" style="margin-bottom:12px;display:none;"></div>
 
   <div class="grid-3" style="margin-bottom:16px;">
     <div class="stat-card"><div class="num" id="statPending">0</div><div class="label">Pending review</div></div>

@@ -98,11 +98,26 @@ export const authAPI = {
     method: 'POST', body: JSON.stringify(data),
   }),
   me: () => api('/auth/me'),
+  forgotRequest: (data) => api('/auth/forgot/request', {
+    method: 'POST', body: JSON.stringify(data),
+  }),
+  forgotVerify: (email, otp) => api('/auth/forgot/verify', {
+    method: 'POST', body: JSON.stringify({ email, otp }),
+  }),
+  forgotReset: (reset_token, new_password) => api('/auth/forgot/reset', {
+    method: 'POST', body: JSON.stringify({ reset_token, new_password }),
+  }),
+  forgotResetWithOtp: (email, otp, new_password) => api('/auth/forgot/reset-with-otp', {
+    method: 'POST', body: JSON.stringify({ email, otp, new_password }),
+  }),
+  requestPasswordChange: (reason) => api('/auth/request-password-change', {
+    method: 'POST', body: JSON.stringify({ reason }),
+  }),
 };
 
 export const adminAPI = {
-  createAccount: (username, password, role, full_name) => api('/admin/create-account', {
-    method: 'POST', body: JSON.stringify({ username, password, role, full_name }),
+  createAccount: (username, password, role, full_name, opts = {}) => api('/admin/create-account', {
+    method: 'POST', body: JSON.stringify({ username, password, role, full_name, ...opts }),
   }),
   listAccounts: () => api('/admin/accounts'),
   listVictims: () => api('/admin/victims'),
@@ -113,6 +128,13 @@ export const adminAPI = {
   listUnregisteredHospitals: () => api('/admin/unregistered-hospitals'),
   verifyUnregisteredHospital: (id) => api(`/admin/unregistered-hospitals/${id}/verify`, { method: 'POST' }),
   listHospitals: () => api('/hospitals'),
+  listPasswordRequests: () => api('/admin/password-requests'),
+  approvePasswordRequest: (id) => api(`/admin/password-requests/${id}/approve`, { method: 'PATCH' }),
+  rejectPasswordRequest: (id) => api(`/admin/password-requests/${id}/reject`, { method: 'PATCH' }),
+  resetPasswordForRequest: (id, new_password) => api(`/admin/password-requests/${id}/reset-password?new_password=${encodeURIComponent(new_password)}`, { method: 'POST' }),
+  listSettings: () => api('/admin/settings'),
+  getSetting: (key) => api(`/admin/settings/${key}`),
+  updateSetting: (key, value) => api(`/admin/settings/${key}`, { method: 'PUT', body: JSON.stringify({ value }) }),
 };
 
 export const victimsAPI = {

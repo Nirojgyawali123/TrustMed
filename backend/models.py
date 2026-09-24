@@ -29,8 +29,9 @@ class Account(Base):
     full_name = Column(String, nullable=True)
     dob = Column(String, nullable=True)
     address = Column(String, nullable=True)
-    phone = Column(EncryptedString(255), nullable=True)
-    citizenship = Column(String, unique=True, nullable=True)
+    phone = Column(String, nullable=True, unique=True, index=True)
+    citizenship = Column(String, unique=True, nullable=True, index=True)
+    email = Column(String, unique=True, nullable=True, index=True)
 
 
 class Victim(Base):
@@ -105,6 +106,49 @@ class MedicalReport(Base):
     original_name = Column(String, nullable=False)
 
     victim = relationship("Victim", back_populates="medical_reports")
+
+
+class PasswordResetOTP(Base):
+    __tablename__ = "password_reset_otps"
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=True, index=True)
+    email = Column(String, nullable=True, index=True)
+    otp_hash = Column(String, nullable=False)
+    expires_at = Column(DateTime, nullable=False, index=True)
+    attempts = Column(Integer, default=0)
+    verified = Column(Boolean, default=False)
+    used = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    account = relationship("Account", backref="reset_otps")
+
+
+class AppSettings(Base):
+    __tablename__ = "app_settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    key = Column(String, unique=True, nullable=False, index=True)
+    value = Column(Text, nullable=True)
+    updated_by = Column(String, nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class PasswordChangeRequest(Base):
+    __tablename__ = "password_change_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
+    username = Column(String, nullable=False)
+    role = Column(String, nullable=False)
+    status = Column(String, default="pending", index=True)  # pending / approved / rejected
+    reason = Column(Text, nullable=True)
+    requested_at = Column(DateTime, default=datetime.utcnow)
+    reviewed_by = Column(String, nullable=True)
+    reviewed_at = Column(DateTime, nullable=True)
+    details = Column(Text, nullable=True)
+
+    account = relationship("Account", backref="password_change_requests")
 
 
 class AuditLog(Base):

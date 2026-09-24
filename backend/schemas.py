@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 from datetime import datetime
 
@@ -34,6 +34,7 @@ class PatientSignupRequest(BaseModel):
     address: str
     phone: str
     citizenship: str
+    email: EmailStr
 
 
 class PatientSignupResponse(BaseModel):
@@ -55,11 +56,40 @@ class ForgotPasswordStep3(BaseModel):
     new_password: str
 
 
+# New forgot flow (5-field verification + email OTP)
+class ForgotRequest(BaseModel):
+    full_name: str
+    phone: str
+    citizenship: str
+    email: EmailStr
+    address: str
+
+
+class ForgotVerify(BaseModel):
+    email: EmailStr
+    otp: str
+
+
+class ForgotReset(BaseModel):
+    email: EmailStr
+    otp: str
+    new_password: str
+
+
+class ForgotResetWithToken(BaseModel):
+    reset_token: str
+    new_password: str
+
+
 class AdminCreateRequest(BaseModel):
     username: str
     password: str
     role: str
     full_name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    citizenship: Optional[str] = None
+    address: Optional[str] = None
 
 
 class AccountResponse(BaseModel):
@@ -71,6 +101,40 @@ class AccountResponse(BaseModel):
     address: Optional[str] = None
     phone: Optional[str] = None
     citizenship: Optional[str] = None
+    email: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class AppSettingsResponse(BaseModel):
+    key: str
+    value: Optional[str] = None
+    updated_by: Optional[str] = None
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class AppSettingsUpdate(BaseModel):
+    value: str
+
+
+class PasswordChangeRequestCreate(BaseModel):
+    reason: Optional[str] = None
+
+
+class PasswordChangeRequestResponse(BaseModel):
+    id: int
+    account_id: int
+    username: str
+    role: str
+    status: str
+    reason: Optional[str] = None
+    requested_at: Optional[datetime] = None
+    reviewed_by: Optional[str] = None
+    reviewed_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
