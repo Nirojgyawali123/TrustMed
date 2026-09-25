@@ -33,3 +33,20 @@ SMTP_FROM = os.getenv("SMTP_FROM", SMTP_USER or "trustmed66@gmail.com")
 OTP_EXPIRE_MINUTES = int(os.getenv("OTP_EXPIRE_MINUTES", "3"))
 OTP_MAX_ATTEMPTS = int(os.getenv("OTP_MAX_ATTEMPTS", "2"))
 OTP_RESEND_COOLDOWN_SECONDS = int(os.getenv("OTP_RESEND_COOLDOWN_SECONDS", "60"))
+
+# CORS origins: comma-separated list. Example: https://trust-med-fyvy.vercel.app,http://localhost:5173
+_raw_frontend = os.getenv("FRONTEND_ORIGIN", "").strip()
+if _raw_frontend:
+    FRONTEND_ORIGINS = [o.strip().rstrip("/") for o in _raw_frontend.split(",") if o.strip()]
+else:
+    # sensible defaults: production locked to Vercel + Render, dev allows localhost + Vercel
+    if os.getenv("ENV", "development") == "production":
+        FRONTEND_ORIGINS = ["https://trust-med-fyvy.vercel.app", "https://trustmed-uzm1.onrender.com"]
+    else:
+        FRONTEND_ORIGINS = [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "https://trust-med-fyvy.vercel.app",
+        ]

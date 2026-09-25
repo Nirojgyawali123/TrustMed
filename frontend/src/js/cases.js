@@ -6,22 +6,14 @@ async function load() {
   const searchQ = params.get('search');
 
   try {
-    const victims = await victimsAPI.getAll();
-    let approved = victims.filter(v => v.hospital_verified && v.muni_verified && !v.paused);
+    // Use server search when query present (backend filters case_id/name/disease/municipality/hospital)
+    const victims = await victimsAPI.getAll(searchQ || undefined);
+    let approved = victims.filter(v => v.hospital_verified && v.muni_verified && !v.paused && !v.rejected);
 
-    if (searchQ) {
-      const q = searchQ.toLowerCase();
-      approved = approved.filter(v =>
-        (v.case_id && v.case_id.toLowerCase().includes(q)) ||
-        v.name.toLowerCase().includes(q) ||
-        v.disease.toLowerCase().includes(q) ||
-        v.municipality_name.toLowerCase().includes(q) ||
-        v.hospital_name.toLowerCase().includes(q)
-      );
-      if (approved.length === 0) {
-        grid.innerHTML = `<div class="card" style="text-align:center;padding:36px 24px;"><p style="font-size:15px;font-weight:600;color:var(--gray-800);margin-bottom:4px;">No results for "${searchQ}"</p><p class="hint"><a href="cases.html">Clear search</a></p></div>`;
-        return;
-      }
+    if (searchQ && approved.length === 0) {
+      // Fallback client filter already applied server-side; show empty
+      grid.innerHTML = `<div class="card" style="text-align:center;padding:36px 24px;"><p style="font-size:15px;font-weight:600;color:var(--gray-800);margin-bottom:4px;">No results for "${searchQ}"</p><p class="hint"><a href="cases.html">Clear search</a></p></div>`;
+      return;
     }
 
     if (approved.length === 0) {
@@ -33,6 +25,8 @@ async function load() {
       const pct = v.total_collected && v.estimated_cost ? Math.min(100, (v.total_collected / v.estimated_cost) * 100) : 0;
       const raised = '₨ ' + Number(v.total_collected || 0).toLocaleString();
       const goal = '₨ ' + Number(v.estimated_cost).toLocaleString();
+      const ageTxt = v.age ? ` · ${v.age}y` : '';
+      const logoHtml = (v.hospital_logo || v.municipality_logo) ? `<div style="display:flex;gap:4px;align-items:center;margin-top:3px;">${v.hospital_logo ? `<img src="/uploads/${v.hospital_logo}" title="${v.hospital_name}" style="height:14px;object-fit:contain;border:1px solid var(--gray-100);border-radius:3px;padding:1px;background:#fff;">` : ''}${v.municipality_logo ? `<img src="/uploads/${v.municipality_logo}" title="${v.municipality_name}" style="height:14px;object-fit:contain;border:1px solid var(--gray-100);border-radius:3px;padding:1px;background:#fff;">` : ''}</div>` : '';
       const photoAvatar = v.patient_photo
         ? `<img src="/uploads/${v.patient_photo}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;display:block;">`
         : `<div class="case-avatar">${v.name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}</div>`;
@@ -40,8 +34,9 @@ async function load() {
         <div class="case-card-top">
           ${photoAvatar}
           <div class="case-info">
-            <div class="case-name">${v.name}</div>
+            <div class="case-name">${v.name}${ageTxt ? `<span style="font-weight:400;color:var(--gray-400);font-size:12px;margin-left:4px;">${ageTxt}</span>` : ''}</div>
             <div class="case-meta">${v.municipality_name} · ${v.case_id || '#'+v.id}</div>
+            ${logoHtml}
           </div>
         </div>
         <div class="case-desc">${v.disease}</div>

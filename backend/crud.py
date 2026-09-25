@@ -1,38 +1,71 @@
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from backend import models, schemas
 from datetime import datetime
+import re
 
 
 def generate_case_id(db: Session) -> str:
     year = datetime.utcnow().year
+    prefix = f"TRUST-{year}-"
+    # Prefer max suffix for this year to avoid duplicate on deletes/count gaps
+    try:
+        row = (
+            db.query(models.Victim.case_id)
+            .filter(models.Victim.case_id.like(f"{prefix}%"))
+            .order_by(models.Victim.id.desc())
+            .first()
+        )
+        if row and row[0]:
+            m = re.search(r"-(\d{4,})$", row[0])
+            if m:
+                nxt = int(m.group(1)) + 1
+                return f"{prefix}{nxt:04d}"
+    except Exception:
+        pass
     count = db.query(models.Victim).count() + 1
+    # ensure monotonically increasing even if prior row was different year — use 1 if collides will retry
     return f"TRUST-{year}-{count:04d}"
 
 
 def create_victim(db: Session, victim_data: schemas.VictimCreate, account_id: int = None):
-    case_id = generate_case_id(db)
-    db_victim = models.Victim(
-        account_id=account_id,
-        case_id=case_id,
-        name=victim_data.name,
-        phone=victim_data.phone,
-        address=victim_data.address,
-        disease=victim_data.disease,
-        hospital_name=victim_data.hospital_name,
-        municipality_name=victim_data.municipality_name,
-        estimated_cost=victim_data.estimated_cost,
-        bank_name=victim_data.bank_name,
-        bank_account_number=victim_data.bank_account_number,
-        bank_account_holder=victim_data.bank_account_holder,
-        bank_branch=victim_data.bank_branch,
-        note_to_donors=victim_data.note_to_donors,
-        other_hospital_name=victim_data.other_hospital_name,
-        other_hospital_address=victim_data.other_hospital_address,
-        other_hospital_contact=victim_data.other_hospital_contact,
-    )
-    db.add(db_victim)
-    db.commit()
-    db.refresh(db_victim)
+    # Retry on unique case_id collision (concurrent creates)
+    last_exc = None
+    for attempt in range(3):
+        case_id = generate_case_id(db)
+        db_victim = models.Victim(
+            account_id=account_id,
+            case_id=case_id,
+            name=victim_data.name,
+            phone=victim_data.phone,
+            address=victim_data.address,
+            disease=victim_data.disease,
+            hospital_name=victim_data.hospital_name,
+            municipality_name=victim_data.municipality_name,
+            estimated_cost=victim_data.estimated_cost,
+            bank_name=victim_data.bank_name,
+            bank_account_number=victim_data.bank_account_number,
+            bank_account_holder=victim_data.bank_account_holder,
+            bank_branch=victim_data.bank_branch,
+            note_to_donors=victim_data.note_to_donors,
+            other_hospital_name=victim_data.other_hospital_name,
+            other_hospital_address=victim_data.other_hospital_address,
+            other_hospital_contact=victim_data.other_hospital_contact,
+        )
+        db.add(db_victim)
+        try:
+            db.commit()
+            db.refresh(db_victim)
+            break
+        except IntegrityError as e:
+            db.rollback()
+            last_exc = e
+            if attempt == 2:
+                raise
+            continue
+    else:
+        if last_exc:
+            raise last_exc
 
     if victim_data.collectors:
         for c in victim_data.collectors:

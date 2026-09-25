@@ -59,6 +59,14 @@
   <div id="caseGrid" style="min-height:200px;">
     <div class="empty-state">Loading cases…</div>
   </div>
+
+  <div class="section-head" style="margin-top:28px;">
+    <h2 class="section-title">Success Stories</h2>
+    <span class="hint" style="font-size:13px;">Fully funded & verified</span>
+  </div>
+  <div id="successGrid" style="min-height:80px;">
+    <div class="hint" style="font-size:13px;">Loading success stories…</div>
+  </div>
 </div>
 
 <script type="module">
@@ -72,50 +80,76 @@ window.searchCase = function() {
 
 async function load() {
   const grid = document.getElementById('caseGrid');
+  const successGrid = document.getElementById('successGrid');
   try {
     const victims = await victimsAPI.getAll();
-    const approved = victims.filter(v => v.hospital_verified && v.muni_verified && !v.paused);
+    const approved = victims.filter(v => v.hospital_verified && v.muni_verified && !v.paused && !v.rejected);
 
     if (approved.length === 0) {
       grid.innerHTML = '<div class="card" style="text-align:center;padding:40px 24px;"><p style="font-size:15px;font-weight:600;color:var(--gray-800);margin-bottom:4px;">No cases yet</p><p class="hint">When a case is verified by the hospital and municipality, it will appear here.</p></div>';
-      return;
+    } else {
+      grid.innerHTML = '<div class="case-grid">' + approved.slice(0, 6).map(v => {
+        const pct = v.total_collected && v.estimated_cost ? Math.min(100, (v.total_collected / v.estimated_cost) * 100) : 0;
+        const raised = '₨ ' + Number(v.total_collected || 0).toLocaleString();
+        const goal = '₨ ' + Number(v.estimated_cost).toLocaleString();
+        const ageTxt = v.age ? ` · ${v.age}y` : '';
+        const logoHtml = (v.hospital_logo || v.municipality_logo) ? `<div style="display:flex;gap:4px;align-items:center;margin-top:4px;">${v.hospital_logo ? `<img src="/uploads/${v.hospital_logo}" style="height:14px;object-fit:contain;border:1px solid var(--gray-100);border-radius:3px;padding:1px;background:#fff;">` : ''}${v.municipality_logo ? `<img src="/uploads/${v.municipality_logo}" style="height:14px;object-fit:contain;border:1px solid var(--gray-100);border-radius:3px;padding:1px;background:#fff;">` : ''}</div>` : '';
+        const photoAvatar = v.patient_photo
+          ? `<img src="/uploads/${v.patient_photo}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;display:block;">`
+          : `<div class="case-avatar">${v.name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}</div>`;
+        return `<div class="case-card" tabindex="0" role="button" aria-label="View case ${v.name}" onclick="window.location.href='/src/pages/case.html?id=${v.id}'" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.location.href='/src/pages/case.html?id=${v.id}'}">
+          <div class="case-card-top">
+            ${photoAvatar}
+            <div class="case-info">
+              <div class="case-name">${v.name}${ageTxt ? `<span style="font-weight:400;color:var(--gray-400);font-size:12px;">${ageTxt}</span>` : ''}</div>
+              <div class="case-meta">${v.municipality_name} · ${v.case_id || '#'+v.id}</div>
+              ${logoHtml}
+            </div>
+          </div>
+          <div class="case-desc">${v.disease}</div>
+          <div class="case-stats">
+            <div class="case-progress"><div class="case-progress-fill" style="width:${pct}%"></div></div>
+            <div class="case-numbers">
+              <span class="case-raised">${raised}</span>
+              <span class="case-goal">${pct.toFixed(0)}% of ${goal}</span>
+            </div>
+          </div>
+          <div class="case-footer">
+            <span class="case-badge green">Hospital verified</span>
+            <span class="case-badge blue">Municipality approved</span>
+          </div>
+        </div>`;
+      }).join('') + '</div>';
+
+      if (approved.length > 6) {
+        grid.innerHTML += '<div class="text-center mt-24"><a href="/src/pages/cases.html" class="btn btn-outline btn-sm">View all ' + approved.length + ' cases</a></div>';
+      }
     }
 
-    grid.innerHTML = '<div class="case-grid">' + approved.slice(0, 6).map(v => {
-      const pct = v.total_collected && v.estimated_cost ? Math.min(100, (v.total_collected / v.estimated_cost) * 100) : 0;
-      const raised = '₨ ' + Number(v.total_collected || 0).toLocaleString();
-      const goal = '₨ ' + Number(v.estimated_cost).toLocaleString();
-      const photoAvatar = v.patient_photo
-        ? `<img src="/uploads/${v.patient_photo}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;display:block;">`
-        : `<div class="case-avatar">${v.name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}</div>`;
-      return `<div class="case-card" tabindex="0" role="button" aria-label="View case ${v.name}" onclick="window.location.href='/src/pages/case.html?id=${v.id}'" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.location.href='/src/pages/case.html?id=${v.id}'}">
-        <div class="case-card-top">
-          ${photoAvatar}
-          <div class="case-info">
-            <div class="case-name">${v.name}</div>
-            <div class="case-meta">${v.municipality_name} · ${v.case_id || '#'+v.id}</div>
+    // Success Stories: fully funded (collected >= estimated) and verified
+    const funded = approved.filter(v => (v.total_collected || 0) >= (v.estimated_cost || 1));
+    if (funded.length === 0) {
+      successGrid.innerHTML = '<div class="card" style="text-align:center;padding:24px;"><p class="hint" style="font-size:13px;">No success stories yet — be the first donor to help a case reach its goal.</p></div>';
+    } else {
+      successGrid.innerHTML = '<div class="case-grid">' + funded.slice(0, 3).map(v => {
+        const pct = Math.min(100, (v.total_collected / v.estimated_cost)*100);
+        const ageTxt = v.age ? ` · ${v.age}y` : '';
+        return `<div class="case-card" style="border:1px solid var(--success-light);background:var(--gray-50);" tabindex="0" role="button" onclick="window.location.href='/src/pages/case.html?id=${v.id}'">
+          <div class="case-card-top">
+            <div style="display:flex;align-items:center;gap:6px;"><span class="pill green">✓ Fully Funded</span><span style="font-size:12px;color:var(--success);font-weight:600;">${pct.toFixed(0)}%</span></div>
           </div>
-        </div>
-        <div class="case-desc">${v.disease}</div>
-        <div class="case-stats">
-          <div class="case-progress"><div class="case-progress-fill" style="width:${pct}%"></div></div>
-          <div class="case-numbers">
-            <span class="case-raised">${raised}</span>
-            <span class="case-goal">${pct.toFixed(0)}% of ${goal}</span>
+          <div style="padding:0 16px 10px;">
+            <div class="case-name">${v.name}${ageTxt ? `<span style="font-weight:400;color:var(--gray-400);font-size:11px;">${ageTxt}</span>` : ''}</div>
+            <div class="case-meta">${v.municipality_name} · ${v.case_id}</div>
+            <div class="case-desc" style="margin-top:4px;">${v.disease}</div>
+            <div class="hint" style="font-size:12px;margin-top:6px;">Raised ₨ ${Number(v.total_collected).toLocaleString()} of ₨ ${Number(v.estimated_cost).toLocaleString()}</div>
           </div>
-        </div>
-        <div class="case-footer">
-          <span class="case-badge green">Hospital verified</span>
-          <span class="case-badge blue">Municipality approved</span>
-        </div>
-      </div>`;
-    }).join('') + '</div>';
-
-    if (approved.length > 6) {
-      grid.innerHTML += '<div class="text-center mt-24"><a href="/src/pages/cases.html" class="btn btn-outline btn-sm">View all ' + approved.length + ' cases</a></div>';
+        </div>`;
+      }).join('') + '</div>';
     }
   } catch (err) {
     grid.innerHTML = '<div class="empty-state">Could not load cases. Make sure the backend is running.</div>';
+    if (successGrid) successGrid.innerHTML = '<div class="empty-state">Could not load success stories.</div>';
   }
 }
 

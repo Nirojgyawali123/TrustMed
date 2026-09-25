@@ -44,7 +44,8 @@ async function load() {
     const raised = Number(v.total_collected || 0).toLocaleString();
     const cost = Number(v.estimated_cost).toLocaleString();
 
-    const photoHtml = v.patient_photo
+     const ageTxt = v.age ? `${v.age} years` : null;
+     const photoHtml = v.patient_photo
       ? `<img src="/uploads/${v.patient_photo}" style="width:64px;height:64px;border-radius:8px;object-fit:cover;border:1px solid var(--gray-200);display:block;">`
       : '';
 
@@ -92,8 +93,8 @@ async function load() {
           ${photoHtml}
           <div style="min-width:0;">
             <div class="eyebrow green">Verified case</div>
-            <h1 class="page-title" style="margin:2px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${v.name}</h1>
-            <div class="hint" style="font-size:12.5px;">${v.case_id || 'Case #'+v.id} · ${v.municipality_name}</div>
+            <h1 class="page-title" style="margin:2px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${v.name}${ageTxt ? `<span style="font-weight:400;color:var(--gray-400);font-size:14px;margin-left:6px;">· ${ageTxt}</span>` : ''}</h1>
+            <div class="hint" style="font-size:12.5px;">${v.case_id || 'Case #'+v.id} · ${v.municipality_name}${v.age ? ` · ${v.age}y` : ''}</div>
           </div>
         </div>
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
@@ -131,6 +132,7 @@ async function load() {
           <div class="card" style="padding:18px;">
             <h3 style="font-size:14px;font-weight:700;margin-bottom:10px;">Patient details</h3>
             <div class="detail-panel">
+              ${ageTxt ? `<div class="kv"><span class="k">Age</span><span class="v">${ageTxt}</span></div>` : ''}
               <div class="kv"><span class="k">Phone</span><span class="v">${v.phone}</span></div>
               <div class="kv"><span class="k">Address</span><span class="v">${v.address}</span></div>
               <div class="kv"><span class="k">Municipality</span><span class="v">${v.municipality_name}</span></div>
@@ -170,7 +172,7 @@ async function load() {
       </div>
 
       <div style="text-align:center;margin-bottom:16px;">
-        <a href="/api/victims/${v.id}/pdf" target="_blank" class="btn btn-outline btn-sm">
+        <a href="/victims/${v.id}/pdf" target="_blank" class="btn btn-outline btn-sm">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Download verification PDF
         </a>

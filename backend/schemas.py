@@ -218,6 +218,7 @@ class VictimResponse(BaseModel):
     hospital_logo: Optional[str] = None
     municipality_logo: Optional[str] = None
     created_at: Optional[datetime] = None
+    age: Optional[int] = None
     collectors: List[CollectorResponse] = []
     medical_reports: List[MedicalReportResponse] = []
 

@@ -287,6 +287,10 @@ async function loadStats() {
     document.getElementById('statPendingHosp').textContent = s.pending_hospital;
     document.getElementById('statPendingMun').textContent = s.pending_municipality;
     document.getElementById('statVerified').textContent = s.verified;
+    const accEl = document.getElementById('statAccounts');
+    if (accEl) accEl.textContent = s.accounts ?? '-';
+    const dccAcc = document.getElementById('drawerAccountsCount');
+    if (dccAcc && s.accounts != null) { dccAcc.textContent = String(s.accounts); dccAcc.style.display = s.accounts ? 'inline-flex' : 'none'; }
     updateDrawerBadges();
   } catch (err) { console.error('Stats error:', err); }
 }

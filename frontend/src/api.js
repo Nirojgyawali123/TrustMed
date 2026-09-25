@@ -139,9 +139,9 @@ export const adminAPI = {
 };
 
 export const victimsAPI = {
-  getAll: () => api('/victims/'),
+  getAll: (search) => api(search ? `/victims/?search=${encodeURIComponent(search)}` : '/victims/'),
   get: (id) => api(`/victims/${id}`),
-  getAllAuth: () => api('/victims/all'),
+  getAllAuth: (search) => api(search ? `/victims/all?search=${encodeURIComponent(search)}` : '/victims/all'),
   create: (data) => api('/victims/', { method: 'POST', body: JSON.stringify(data) }),
   verify: (id, role) => api(`/victims/${id}/verify/${role}`, { method: 'PATCH' }),
   reject: (id, reason) => api(`/victims/${id}/reject${reason ? `?reason=${encodeURIComponent(reason)}` : ''}`, { method: 'PATCH' }),

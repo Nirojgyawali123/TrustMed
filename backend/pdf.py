@@ -18,11 +18,27 @@ def generate_case_pdf(victim, base_url: str = "http://127.0.0.1:5173") -> bytes:
     pdf = FPDF(orientation="P", unit="mm", format="A4")
     pdf.set_auto_page_break(auto=True, margin=20)
 
-    case_url = f"{base_url}/case.html?id={victim.id}"
-    donate_url = f"{base_url}/case.html?id={victim.id}"
-
+    case_url = f"{base_url.rstrip('/')}/case.html?id={victim.id}"
+    # QR1 always case verification URL; QR2 prefers victim's uploaded bank QR image (per user decision)
     qr_case_path = _qr_image(case_url)
-    qr_donate_path = _qr_image(donate_url)
+    # If victim uploaded a bank QR, embed that image directly as donor QR; else generate donate URL QR
+    bank_qr_path = None
+    qr_donate_path = None
+    qr_donate_is_temp = False
+    if getattr(victim, "bank_qr", None):
+        candidate = os.path.join(UPLOAD_DIR, victim.bank_qr)
+        if os.path.exists(candidate):
+            bank_qr_path = candidate
+            qr_donate_path = bank_qr_path
+        else:
+            donate_url = f"{case_url}#donate"
+            qr_donate_path = _qr_image(donate_url)
+            qr_donate_is_temp = True
+    else:
+        donate_url = f"{case_url}#donate"
+        qr_donate_path = _qr_image(donate_url)
+        qr_donate_is_temp = True
+    qr_case_is_temp = True
 
     # Helper
     def add_header(page_title: str):
@@ -44,14 +60,23 @@ def generate_case_pdf(victim, base_url: str = "http://127.0.0.1:5173") -> bytes:
 
     def add_qr_side():
         y_start = pdf.get_y()
-        pdf.image(qr_case_path, x=160, y=y_start, w=22, h=22)
+        # ensure we have paths
+        try:
+            pdf.image(qr_case_path, x=160, y=y_start, w=22, h=22)
+        except Exception:
+            pass
         pdf.set_xy(160, y_start + 23)
         pdf.set_font("Helvetica", "", 6)
         pdf.set_text_color(80, 80, 80)
         pdf.cell(22, 3, "Scan to view case", align="C")
-        pdf.image(qr_donate_path, x=185, y=y_start, w=22, h=22)
+        try:
+            pdf.image(qr_donate_path, x=185, y=y_start, w=22, h=22)
+        except Exception:
+            pass
         pdf.set_xy(185, y_start + 23)
-        pdf.cell(22, 3, "Scan to donate", align="C")
+        # label adapts if we are showing victim bank QR
+        label = "Victim Bank QR" if bank_qr_path else "Scan to donate"
+        pdf.cell(22, 3, label, align="C")
 
     pdf.set_text_color(0, 0, 0)
 
@@ -171,8 +196,22 @@ def generate_case_pdf(victim, base_url: str = "http://127.0.0.1:5173") -> bytes:
     pdf.set_text_color(60, 60, 60)
     pdf.cell(0, 5, f"Bank: {victim.bank_name}", new_x="LMARGIN", new_y="NEXT")
     pdf.cell(0, 5, f"Account Holder: {victim.bank_account_holder}", new_x="LMARGIN", new_y="NEXT")
-    pdf.cell(0, 5, f"Account Number: {victim.bank_account_number}", new_x="LMARGIN", new_y="NEXT")
+    # Mask raw account number — donors scan victim's Bank QR instead (privacy per your decision)
+    pdf.cell(0, 5, "Account Number: **** (scan Bank QR to donate)", new_x="LMARGIN", new_y="NEXT")
     pdf.cell(0, 5, f"Branch: {victim.bank_branch}", new_x="LMARGIN", new_y="NEXT")
+    # Embed expanded Bank QR image if available
+    if bank_qr_path and os.path.exists(bank_qr_path):
+        try:
+            y_qr = pdf.get_y() + 2
+            pdf.image(bank_qr_path, x=12, y=y_qr, w=36, h=36)
+            pdf.set_xy(50, y_qr + 12)
+            pdf.set_font("Helvetica", "", 8)
+            pdf.set_text_color(80, 80, 80)
+            pdf.cell(0, 4, "Scan this QR with your banking app (Fonepay/ConnectIPS/eSewa/Khalti) — funds go directly to patient's bank.", new_x="LMARGIN", new_y="NEXT")
+            pdf.set_y(y_qr + 38)
+            pdf.set_text_color(60, 60, 60)
+        except Exception:
+            pass
 
     if victim.note_to_donors:
         pdf.ln(4)
@@ -220,10 +259,12 @@ def generate_case_pdf(victim, base_url: str = "http://127.0.0.1:5173") -> bytes:
     pdf.set_y(-14)
     pdf.cell(0, 4, "This is a system-generated verification document from TrustMed.", align="C")
 
-    # Cleanup temp QR images
+    # Cleanup temp QR images (do not delete victim uploaded bank_qr)
     try:
-        os.unlink(qr_case_path)
-        os.unlink(qr_donate_path)
+        if qr_case_is_temp and os.path.exists(qr_case_path):
+            os.unlink(qr_case_path)
+        if qr_donate_is_temp and qr_donate_path and os.path.exists(qr_donate_path):
+            os.unlink(qr_donate_path)
     except Exception:
         pass
 

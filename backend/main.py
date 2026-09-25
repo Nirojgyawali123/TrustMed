@@ -19,7 +19,7 @@ from jose import JWTError, jwt
 import bcrypt
 
 from backend import crud, models, schemas, database, pdf as pdfgen
-from backend.config import JWT_SECRET, JWT_ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, OTP_EXPIRE_MINUTES, OTP_MAX_ATTEMPTS, OTP_RESEND_COOLDOWN_SECONDS
+from backend.config import JWT_SECRET, JWT_ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, OTP_EXPIRE_MINUTES, OTP_MAX_ATTEMPTS, OTP_RESEND_COOLDOWN_SECONDS, FRONTEND_ORIGINS
 from backend.email import send_otp_email, _get_sender_email
 
 # ──────────────────────────────────────────
@@ -50,6 +50,75 @@ def _normalize_email(s: str) -> str:
 
 def _hash_otp(otp: str) -> str:
     return hashlib.sha256(otp.encode("utf-8")).hexdigest()
+
+def _sanitize_base_url(raw: str) -> str:
+    """Whitelist base_url against FRONTEND_ORIGINS to prevent open-redirect QR injection."""
+    if not raw or not isinstance(raw, str):
+        return FRONTEND_ORIGINS[0] if FRONTEND_ORIGINS and FRONTEND_ORIGINS[0] != "*" else "http://127.0.0.1:5173"
+    raw = raw.strip().rstrip("/")
+    if not raw.startswith(("http://", "https://")):
+        raw = "https://" + raw
+    # exact origin check
+    try:
+        from urllib.parse import urlparse as _up
+        p = _up(raw)
+        origin = f"{p.scheme}://{p.netloc}".lower()
+        # allow localhost/127.0.0.1 with any port for dev
+        if p.hostname in ("localhost", "127.0.0.1"):
+            return f"{p.scheme}://{p.hostname}" + (f":{p.port}" if p.port else "")
+        for allowed in FRONTEND_ORIGINS:
+            if allowed == "*":
+                return raw
+            if origin == allowed.lower().rstrip("/"):
+                return raw
+            # also allow sub-match for Vercel preview suffix? strict only
+        # not whitelisted → fallback to first allowed
+        return FRONTEND_ORIGINS[0] if FRONTEND_ORIGINS and FRONTEND_ORIGINS[0] != "*" else "http://127.0.0.1:5173"
+    except Exception:
+        return FRONTEND_ORIGINS[0] if FRONTEND_ORIGINS and FRONTEND_ORIGINS[0] != "*" else "http://127.0.0.1:5173"
+
+def _calc_age(dob_str: Optional[str]) -> Optional[int]:
+    if not dob_str:
+        return None
+    try:
+        from datetime import date as _d
+        # support YYYY-MM-DD and DD/MM/YYYY
+        dob: Optional[_d] = None
+        for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%d-%m-%Y", "%d/%m/%Y"):
+            try:
+                dob = datetime.strptime(dob_str.strip(), fmt).date()  # type: ignore
+                break
+            except Exception:
+                continue
+        if dob is None:
+            # try ISO
+            try:
+                dob = datetime.fromisoformat(dob_str.strip()).date()  # type: ignore
+            except Exception:
+                return None
+        today = datetime.utcnow().date()
+        age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+        return age if 0 <= age <= 120 else None
+    except Exception:
+        return None
+
+def _populate_victim_age(victim: models.Victim, db: Session) -> None:
+    try:
+        if victim.account_id:
+            acc = db.query(models.Account).filter(models.Account.id == victim.account_id).first()
+            if acc and acc.dob:
+                age = _calc_age(acc.dob)
+                if age is not None:
+                    victim.__dict__["age"] = age
+                else:
+                    victim.__dict__["age"] = None
+            else:
+                victim.__dict__["age"] = None
+        else:
+            victim.__dict__["age"] = None
+    except Exception:
+        victim.__dict__["age"] = None
+
 
 def _get_account_phone_plain(account: models.Account) -> str:
     """Account.phone is now plaintext String, but old rows may be Fernet ciphertext.
@@ -93,14 +162,23 @@ except Exception:
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "..", "uploads")
 
 # ──────────────────────────────────────────
-# Simple in-memory rate limiter
+# Simple in-memory rate limiter + login lockout + signup IP cap
 # ──────────────────────────────────────────
 
 _rate_store = defaultdict(list)
+_login_fail_store: dict[str, list[float]] = defaultdict(list)
+_signup_ip_store: dict[str, list[float]] = defaultdict(list)
+
+def _client_ip(request: Request) -> str:
+    # respect proxy header on Render/Vercel
+    xf = request.headers.get("x-forwarded-for") or ""
+    if xf:
+        return xf.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
 
 def rate_limit(max_per_minute: int = 20):
     def limiter(request: Request):
-        client = request.client.host if request.client else "unknown"
+        client = _client_ip(request)
         # Include user identifier if present (Authorization header) for per-user isolation
         auth = request.headers.get("authorization") or ""
         # Use first 20 chars of token as user fingerprint to avoid host-only bypass
@@ -114,6 +192,30 @@ def rate_limit(max_per_minute: int = 20):
         _rate_store[key].append(now)
         return True
     return limiter
+
+def _is_login_locked(ip: str, username: str) -> bool:
+    key = f"{ip}:{username.lower()}"
+    now = time.time()
+    window = now - 15 * 60
+    _login_fail_store[key] = [t for t in _login_fail_store.get(key, []) if t > window]
+    return len(_login_fail_store[key]) >= 5
+
+def _record_login_fail(ip: str, username: str) -> None:
+    key = f"{ip}:{username.lower()}"
+    _login_fail_store[key].append(time.time())
+
+def _clear_login_fails(ip: str, username: str) -> None:
+    key = f"{ip}:{username.lower()}"
+    _login_fail_store.pop(key, None)
+
+def _check_signup_cap(request: Request) -> None:
+    ip = _client_ip(request)
+    now = time.time()
+    day_window = now - 24 * 60 * 60
+    _signup_ip_store[ip] = [t for t in _signup_ip_store.get(ip, []) if t > day_window]
+    if len(_signup_ip_store[ip]) >= 5:
+        raise HTTPException(status_code=429, detail="Too many signups from this IP. Max 5 accounts per day. Try tomorrow.")
+    _signup_ip_store[ip].append(now)
 
 # ──────────────────────────────────────────
 # File upload validation (magic bytes)
@@ -142,11 +244,61 @@ def check_file_mime(file_bytes: bytes, allow_pdf: bool = False) -> str:
                 return name
     raise HTTPException(status_code=400, detail=f"File type not allowed. Must be JPEG, PNG, GIF, or WebP{' or PDF' if allow_pdf else ''}.")
 
+def _strip_exif_bytes(contents: bytes, file_type: str) -> bytes:
+    """Strip EXIF/metadata by re-encoding JPEG/PNG via Pillow. Returns original on failure."""
+    if not PIL_AVAILABLE or file_type not in ("JPEG", "PNG", "WEBP"):
+        return contents
+    try:
+        img = Image.open(io.BytesIO(contents))
+        # handle orientation via EXIF transpose where available
+        try:
+            from PIL import ImageOps  # type: ignore
+            img = ImageOps.exif_transpose(img)
+        except Exception:
+            pass
+        buf = io.BytesIO()
+        # Preserve format where sensible; strip metadata by not passing exif
+        save_kwargs: dict = {"optimize": True}
+        if file_type == "JPEG":
+            if img.mode in ("RGBA", "LA", "P"):
+                bg = Image.new("RGB", img.size, (255, 255, 255))
+                if img.mode == "P":
+                    img = img.convert("RGBA")
+                bg.paste(img, mask=img.split()[-1] if img.mode in ("RGBA", "LA") else None)
+                img = bg
+            elif img.mode != "RGB":
+                img = img.convert("RGB")
+            save_kwargs["quality"] = 85
+            img.save(buf, format="JPEG", **save_kwargs)
+        elif file_type == "PNG":
+            img.save(buf, format="PNG", **save_kwargs)
+        elif file_type == "WEBP":
+            if img.mode not in ("RGB", "RGBA"):
+                img = img.convert("RGBA" if img.mode == "LA" else "RGB")
+            save_kwargs["quality"] = 85
+            img.save(buf, format="WEBP", **save_kwargs)
+        else:
+            return contents
+        out = buf.getvalue()
+        # never increase size beyond original by >10% — prefer smaller stripped version
+        if len(out) > len(contents) * 1.1:
+            return contents
+        return out if 0 < len(out) <= len(contents) * 1.5 else contents
+    except Exception:
+        return contents
+
+
 def save_uploaded_file(file: UploadFile, subdir: str, max_mb: int = 5, allow_pdf: bool = False) -> str:
     contents = file.file.read()
     if len(contents) > max_mb * 1024 * 1024:
         raise HTTPException(status_code=400, detail=f"File too large. Max {max_mb} MB.")
     file_type = check_file_mime(contents[:64], allow_pdf=allow_pdf)
+    # Strip EXIF/metadata for images to prevent GPS/device leakage & malware via EXIF
+    if file_type in ("JPEG", "PNG", "WEBP"):
+        contents = _strip_exif_bytes(contents, file_type)
+        # re-check size after re-encode (may have grown slightly for PNG→JPEG edge, but we prefer stripped)
+        if len(contents) > max_mb * 1024 * 1024:
+            raise HTTPException(status_code=400, detail=f"File too large after processing. Max {max_mb} MB.")
     ext_map = {'JPEG': '.jpg', 'PNG': '.png', 'GIF': '.gif', 'WEBP': '.webp', 'PDF': '.pdf'}
     ext = ext_map.get(file_type, '.bin')
     unique_name = f"{uuid.uuid4().hex}{ext}"
@@ -397,7 +549,12 @@ def _can_view_citizenship(victim: models.Victim, account: models.Account) -> boo
     if account.role == "admin":
         return True
     if account.role == "municipality":
-        return True
+        # Ward-scoped: municipality may only view docs for cases in their ward (exact normalized municipality_name match)
+        cur = _normalize_text(account.full_name or "")
+        mn = _normalize_text(victim.municipality_name or "")
+        if cur and mn and cur == mn:
+            return True
+        return False
     if account.role == "patient" and victim.account_id is not None and victim.account_id == account.id:
         return True
     return False
@@ -434,11 +591,15 @@ database.seed_admin()
 
 backend = FastAPI(title="TrustMed API")
 
+# Restrict CORS to explicit whitelist — no wildcard in production
+_backend_cors_origins = FRONTEND_ORIGINS if FRONTEND_ORIGINS else ["*"]
+_backend_cors_allow_all = _backend_cors_origins == ["*"]
 backend.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=_backend_cors_origins,
+    allow_credentials=not _backend_cors_allow_all,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Auth-User", "X-Auth-Pass", "role"],
 )
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -501,12 +662,28 @@ def get_current_user(
             raise HTTPException(status_code=401, detail="Invalid or expired token")
 
     if x_auth_user and x_auth_pass:
+        # Deprecated legacy header path — now verifies via bcrypt (was plain string compare).
+        # Frontend uses Bearer JWT; this path remains for admin tooling/scripts. Prefer Bearer.
         account = db.query(models.Account).filter(models.Account.username == x_auth_user).first()
-        if not account or account.password != x_auth_pass:
+        if not account:
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        try:
+            ok = bcrypt.checkpw(x_auth_pass.encode("utf-8"), account.password.encode("utf-8"))
+        except Exception:
+            # Fallback for legacy plaintext passwords (pre-bcrypt rows) — migrate on success
+            ok = (account.password == x_auth_pass)
+            if ok:
+                # auto-migrate to bcrypt
+                try:
+                    account.password = bcrypt.hashpw(x_auth_pass.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+                    db.commit()
+                except Exception:
+                    pass
+        if not ok:
             raise HTTPException(status_code=401, detail="Invalid credentials")
         return account
 
-    raise HTTPException(status_code=401, detail="Authentication required. Provide Bearer token or X-Auth-User / X-Auth-Pass headers.")
+    raise HTTPException(status_code=401, detail="Authentication required. Provide Bearer token.")
 
 
 def get_optional_user(
@@ -529,8 +706,13 @@ def get_optional_user(
             return None
     if x_auth_user and x_auth_pass:
         account = db.query(models.Account).filter(models.Account.username == x_auth_user).first()
-        if account and account.password == x_auth_pass:
-            return account
+        if account:
+            try:
+                if bcrypt.checkpw(x_auth_pass.encode("utf-8"), account.password.encode("utf-8")):
+                    return account
+            except Exception:
+                if account.password == x_auth_pass:
+                    return account
     return None
 
 
@@ -547,18 +729,25 @@ def require_role(*roles: str):
 # ──────────────────────────────────────────
 
 @backend.post("/auth/login", response_model=schemas.LoginResponse)
-def login(req: schemas.LoginRequest, db: Session = Depends(database.get_db), _: bool = Depends(rate_limit(20))):
+def login(req: schemas.LoginRequest, request: Request, db: Session = Depends(database.get_db), _: bool = Depends(rate_limit(20))):
+    ip = _client_ip(request)
+    if _is_login_locked(ip, req.username):
+        raise HTTPException(status_code=429, detail="Too many failed attempts. Try again after 15 minutes.")
     account = db.query(models.Account).filter(models.Account.username == req.username).first()
     if not account or not bcrypt.checkpw(req.password.encode("utf-8"), account.password.encode("utf-8")):
+        _record_login_fail(ip, req.username)
         crud.log_action(db, "login_failed", req.username, "unknown")
+        # if now locked, inform with 429 on next attempt; this attempt stays 401 for compatibility
         raise HTTPException(status_code=401, detail="Invalid username or password")
+    _clear_login_fails(ip, req.username)
     token = create_access_token({"sub": str(account.id), "username": account.username, "role": account.role})
     crud.log_action(db, "login_success", req.username, account.role)
     return schemas.LoginResponse(id=account.id, username=account.username, role=account.role, access_token=token)
 
 
 @backend.post("/auth/signup", response_model=schemas.PatientSignupResponse)
-def signup(req: schemas.PatientSignupRequest, db: Session = Depends(database.get_db), _: bool = Depends(rate_limit(5))):
+def signup(req: schemas.PatientSignupRequest, request: Request, db: Session = Depends(database.get_db), _: bool = Depends(rate_limit(5))):
+    _check_signup_cap(request)
     existing_user = db.query(models.Account).filter(models.Account.username == req.username).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Username already taken")
@@ -1020,6 +1209,7 @@ def admin_stats(db: Session = Depends(database.get_db), admin: models.Account = 
         models.Victim.muni_verified == True,
         models.Victim.paused == False,
     ).count()
+    accounts = db.query(models.Account).count()
     return {
         "total": total,
         "paused": paused,
@@ -1027,6 +1217,7 @@ def admin_stats(db: Session = Depends(database.get_db), admin: models.Account = 
         "pending_hospital": pending_hospital,
         "pending_municipality": pending_municipality,
         "verified": verified,
+        "accounts": accounts,
     }
 
 
@@ -1166,17 +1357,53 @@ def create_victim(
     db: Session = Depends(database.get_db),
     account: models.Account = Depends(require_role("patient")),
 ):
+    # Backend validation: wizard compulsory fields + sane limits
+    if not victim.estimated_cost or victim.estimated_cost <= 0:
+        raise HTTPException(status_code=400, detail="Estimated cost must be greater than 0.")
+    if victim.estimated_cost > 100_000_000:
+        raise HTTPException(status_code=400, detail="Estimated cost too large (max 10 crore NPR).")
+    if not (victim.hospital_name or "").strip():
+        raise HTTPException(status_code=400, detail="Hospital name is required.")
+    if not (victim.municipality_name or "").strip():
+        raise HTTPException(status_code=400, detail="Municipality / ward is required.")
+    if not (victim.name or "").strip():
+        raise HTTPException(status_code=400, detail="Patient name is required.")
+    if not (victim.disease or "").strip():
+        raise HTTPException(status_code=400, detail="Diagnosis is required.")
+    if not (victim.address or "").strip():
+        raise HTTPException(status_code=400, detail="Patient address is required.")
+    if victim.collectors and len(victim.collectors) > 10:
+        raise HTTPException(status_code=400, detail="Maximum 10 collectors allowed.")
+    # validate Other hospital fields when hospital_name == Other
+    if victim.hospital_name.strip().lower() == "other":
+        if not (victim.other_hospital_name or "").strip():
+            raise HTTPException(status_code=400, detail="Unregistered hospital name is required when selecting Other.")
     return crud.create_victim(db=db, victim_data=victim, account_id=account.id)
 
 
 @backend.get("/victims/", response_model=list[schemas.VictimResponse])
-def read_public_victims(db: Session = Depends(database.get_db)):
-    victims = db.query(models.Victim).filter(
+def read_public_victims(
+    search: Optional[str] = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=100),
+    db: Session = Depends(database.get_db),
+):
+    q = db.query(models.Victim).filter(
         models.Victim.hospital_verified == True,
         models.Victim.muni_verified == True,
         models.Victim.paused == False,
         models.Victim.rejected == False,
-    ).all()
+    )
+    if search and search.strip():
+        s = f"%{search.strip()}%"
+        q = q.filter(
+            (models.Victim.case_id.ilike(s))
+            | (models.Victim.name.ilike(s))
+            | (models.Victim.disease.ilike(s))
+            | (models.Victim.municipality_name.ilike(s))
+            | (models.Victim.hospital_name.ilike(s))
+        )
+    victims = q.order_by(models.Victim.created_at.desc()).offset(skip).limit(limit).all()
     # Hide raw bank account number from public — donors use QR instead
     # Citizenship doc is strictly victim/municipality/admin — hide from public
     for v in victims:
@@ -1186,23 +1413,44 @@ def read_public_victims(db: Session = Depends(database.get_db)):
         if v.other_hospital_contact:
             v.__dict__["other_hospital_contact"] = "****"
         v.__dict__["citizenship_doc"] = None
+        _populate_victim_age(v, db)
     return victims
 
 
 @backend.get("/victims/all", response_model=list[schemas.VictimResponse])
-def read_all_victims(db: Session = Depends(database.get_db), account: models.Account = Depends(get_current_user)):
+def read_all_victims(
+    search: Optional[str] = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=200),
+    db: Session = Depends(database.get_db),
+    account: models.Account = Depends(get_current_user),
+):
     q = db.query(models.Victim)
     if account.role == "patient":
         q = q.filter(models.Victim.account_id == account.id)
     elif account.role == "hospital":
+        # initial fuzzy DB filter for index use, then strict Python gate via _can_access_victim
         q = q.filter(models.Victim.hospital_name.ilike(f"%{account.full_name or ''}%"))
     elif account.role == "municipality":
         q = q.filter(models.Victim.municipality_name.ilike(f"%{account.full_name or ''}%"))
-    victims = q.order_by(models.Victim.created_at.desc()).all()
-    # Strip citizenship_doc for unauthorized viewers (hospital must not see gov doc)
+    if search and search.strip():
+        s = f"%{search.strip()}%"
+        q = q.filter(
+            (models.Victim.case_id.ilike(s))
+            | (models.Victim.name.ilike(s))
+            | (models.Victim.disease.ilike(s))
+            | (models.Victim.municipality_name.ilike(s))
+            | (models.Victim.hospital_name.ilike(s))
+        )
+    victims = q.order_by(models.Victim.created_at.desc()).offset(skip).limit(limit).all()
+    # Strict isolation: enforce exact normalized match via _can_access_victim for hospital/municipality
+    if account.role in ("hospital", "municipality"):
+        victims = [v for v in victims if _can_access_victim(v, account)]
+    # Strip citizenship_doc for unauthorized viewers (hospital must not see gov doc, municipality ward-scoped)
     for v in victims:
         if not _can_view_citizenship(v, account):
             v.__dict__["citizenship_doc"] = None
+        _populate_victim_age(v, db)
     return victims
 
 
@@ -1213,11 +1461,17 @@ def read_victim(victim_id: int, db: Session = Depends(database.get_db), account:
         raise HTTPException(status_code=404, detail="Victim not found")
     is_public = victim.hospital_verified and victim.muni_verified and not victim.paused and not victim.rejected
     if is_public:
-        victim.__dict__["bank_account_number"] = "****"
-        victim.__dict__["phone"] = "***"
-        if victim.other_hospital_contact:
-            victim.__dict__["other_hospital_contact"] = "****"
+        # Public donors see masked PII; owner/admin/matching municipality see raw via auth (citizenship still gated)
+        is_owner = bool(account and _is_owner_patient(victim, account))
+        is_admin = bool(account and account.role == "admin")
+        if not (is_owner or is_admin):
+            victim.__dict__["bank_account_number"] = "****"
+            victim.__dict__["phone"] = "***"
+            if victim.other_hospital_contact:
+                victim.__dict__["other_hospital_contact"] = "****"
+        # citizenship doc always hidden from public response; fetch via dedicated /citizenship-doc with ward check
         victim.__dict__["citizenship_doc"] = None
+        _populate_victim_age(victim, db)
         return victim
     # Non-public: hide existence from anon, enforce strict isolation
     if account is None:
@@ -1233,6 +1487,7 @@ def read_victim(victim_id: int, db: Session = Depends(database.get_db), account:
         victim.__dict__["phone"] = "***"
         if victim.other_hospital_contact:
             victim.__dict__["other_hospital_contact"] = "****"
+    _populate_victim_age(victim, db)
     return victim
 
 
@@ -1250,6 +1505,10 @@ def upload_medical_report(
     # Only owner patient or admin may add reports — strict isolation
     if not (account.role == "admin" or _is_owner_patient(victim, account)):
         raise HTTPException(status_code=403, detail="Only the case owner can upload medical reports")
+    # Cap total reports per case to prevent storage abuse
+    existing_cnt = db.query(models.MedicalReport).filter(models.MedicalReport.victim_id == victim_id).count()
+    if existing_cnt >= 20:
+        raise HTTPException(status_code=400, detail="Maximum 20 medical reports per case.")
     # Medical reports: keep clear, enhance if blurry (sharpen/contrast/denoise), store up to 10 MB — not crushed to 200 KB
     contents = file.file.read()
     if len(contents) > 10 * 1024 * 1024:
@@ -1445,7 +1704,8 @@ def get_citizenship_meta(
 def upload_logo(
     victim_id: int,
     file: UploadFile = File(...),
-    role: str = Header(...),
+    role: Optional[str] = Header(None),
+    role_q: Optional[str] = Query(None, alias="role"),
     db: Session = Depends(database.get_db),
     account: models.Account = Depends(require_role("hospital", "municipality")),
     _: bool = Depends(rate_limit(10)),
@@ -1453,8 +1713,11 @@ def upload_logo(
     victim = db.query(models.Victim).filter(models.Victim.id == victim_id).first()
     if not victim:
         raise HTTPException(status_code=404, detail="Victim not found")
-    if role not in ["hospital", "municipality"]:
+    # Accept role from header (frontend) or query param or infer from account role
+    effective_role = (role or role_q or account.role or "").strip().lower()
+    if effective_role not in ["hospital", "municipality"]:
         raise HTTPException(status_code=400, detail="Role must be 'hospital' or 'municipality'")
+    role = effective_role
     # Strict isolation: only assigned hospital/municipality (or admin) may upload logo for this case
     if not _can_access_victim(victim, account):
         raise HTTPException(status_code=403, detail="Not your assigned case")
@@ -1492,6 +1755,13 @@ def verify_victim(
             raise HTTPException(status_code=403, detail="Not your assigned case")
         if role == "municipality" and not victim.hospital_verified:
             raise HTTPException(status_code=400, detail="Hospital must verify first")
+        # Prerequisites: hospital needs at least 1 medical report; municipality needs citizenship doc
+        if role == "hospital":
+            rc = db.query(models.MedicalReport).filter(models.MedicalReport.victim_id == victim_id).count()
+            if rc == 0:
+                raise HTTPException(status_code=400, detail="At least one medical report is required for hospital verification.")
+        if role == "municipality" and not victim.citizenship_doc:
+            raise HTTPException(status_code=400, detail="Government citizenship document is required for municipality verification.")
     updated_victim = crud.verify_case(db=db, victim_id=victim_id, role=role, actor=account.username)
     if not updated_victim:
         raise HTTPException(status_code=404, detail="Victim not found")
@@ -1538,14 +1808,18 @@ def resubmit_victim(
 
 
 # ──────────────────────────────────────────
-# PDF download endpoint
+# PDF download endpoint (verification guard + base_url whitelist)
 # ──────────────────────────────────────────
 
 @backend.get("/victims/{victim_id}/pdf")
-def download_case_pdf(victim_id: int, base_url: str = Query("http://127.0.0.1:5173"), db: Session = Depends(database.get_db)):
+def download_case_pdf(victim_id: int, base_url: str = Query("http://127.0.0.1:5173"), db: Session = Depends(database.get_db), _: bool = Depends(rate_limit(10))):
     victim = crud.get_victim(db, victim_id)
     if not victim:
         raise HTTPException(status_code=404, detail="Victim not found")
+    # Only fully verified live cases may generate official verification PDF (per connectionflow #Printable A4)
+    if not (victim.hospital_verified and victim.muni_verified and not victim.paused and not victim.rejected):
+        raise HTTPException(status_code=400, detail="Verification document available only after hospital + municipality approval and when not paused/rejected.")
+    base_url = _sanitize_base_url(base_url)
     pdf_data = pdfgen.generate_case_pdf(victim, base_url=base_url)
     return Response(
         content=bytes(pdf_data),
